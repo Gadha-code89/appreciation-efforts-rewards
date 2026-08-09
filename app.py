@@ -571,10 +571,14 @@ elif st.session_state.user_role == "parent":
                     default_emoji = "❤️"
                     title_val = f"{default_emoji} {title_val}"
 
+                why_val = new_why.strip()
+                if why_val and not why_val.startswith("💡"):
+                    why_val = f"💡 {why_val}"
+
                 missions.append({
                     "id": new_id,
                     "title": title_val,
-                    "why": new_why.strip(),
+                    "why": why_val,
                     "status": "Not reported",
                     "praise": "",
                     "category": new_cat
