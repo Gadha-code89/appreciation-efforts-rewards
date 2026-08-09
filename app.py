@@ -191,6 +191,8 @@ streak = state.get("streak", 0)
 total_stars = state.get("total_stars", 0)
 badges = state.get("badges", [])
 missions = state.setdefault("daily_missions", [])
+# Sort in-place: Math first, Reading last, others in middle
+missions.sort(key=lambda m: 0 if m.get("id") == "math_mission" else (2 if (m.get("id") == "reading" or "read" in m.get("title", "").lower()) else 1))
 stars_today = sum(1 for m in missions if m.get("status") == "Completed")
 
 
