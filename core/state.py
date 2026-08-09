@@ -189,7 +189,6 @@ def check_and_apply_9am_rollover(state: Dict[str, Any]) -> Dict[str, Any]:
             state["yesterday_reward_praise"] = ""
 
         # 4. Reset Daily State
-        state["total_stars"] = 0
         state["tomorrow_reward"] = ""
         state["effective_date"] = current_effective_date
         state["operating_day_start"] = f"{current_effective_date}T09:00:00"

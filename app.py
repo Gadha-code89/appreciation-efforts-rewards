@@ -186,12 +186,12 @@ def switch_profile():
     st.rerun()
 
 
-# Load system state
 state = load_state()
 streak = state.get("streak", 0)
 total_stars = state.get("total_stars", 0)
 badges = state.get("badges", [])
 missions = state.setdefault("daily_missions", [])
+stars_today = sum(1 for m in missions if m.get("status") == "Completed")
 
 
 # ==================== PROFILE SELECTOR SCREEN ====================
@@ -241,12 +241,14 @@ elif st.session_state.user_role == "child":
 
     # Visual indicators panel
     st.write("")
-    ind_col1, ind_col2, ind_col3 = st.columns(3)
+    ind_col1, ind_col2, ind_col3, ind_col4 = st.columns(4)
     with ind_col1:
         st.markdown(f'<div class="card" style="text-align: center; padding: 12px;"><div style="font-size: 1.5rem;">🔥</div><b>Streak:</b> {streak} Days</div>', unsafe_allow_html=True)
     with ind_col2:
-        st.markdown(f'<div class="card" style="text-align: center; padding: 12px;"><div style="font-size: 1.5rem;">⭐</div><b>Stars Today:</b> {total_stars}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card" style="text-align: center; padding: 12px;"><div style="font-size: 1.5rem;">⭐</div><b>Stars Today:</b> {stars_today}</div>', unsafe_allow_html=True)
     with ind_col3:
+        st.markdown(f'<div class="card" style="text-align: center; padding: 12px;"><div style="font-size: 1.5rem;">🌟</div><b>Total Stars:</b> {total_stars}</div>', unsafe_allow_html=True)
+    with ind_col4:
         st.markdown(f'<div class="card" style="text-align: center; padding: 12px;"><div style="font-size: 1.5rem;">🏅</div><b>Badges:</b> {len(badges)}</div>', unsafe_allow_html=True)
 
     # Yesterday's reward praise alert
@@ -409,7 +411,7 @@ elif st.session_state.user_role == "child":
 
     # ---------- JOURNEY TAB ----------
     with tab_journey:
-        lifetime_stars = sum(entry.get("stars_earned", 0) for entry in state.get("journey", [])) + total_stars
+        lifetime_stars = total_stars
         st.markdown(f"""
         <div class="card" style="text-align: center; border-color: #F59E0B; background: #FFFBEB; margin-bottom: 20px !important;">
             <div style="font-size: 3rem; margin-bottom: 5px;">🌟</div>

@@ -82,7 +82,9 @@ class TestMyLittleWinsIntegration(unittest.TestCase):
         self.state = check_and_apply_9am_rollover(self.state)
 
         # 3. Verify daily stats are reset
-        self.assertEqual(self.state["total_stars"], 0) # Daily stars reset back to 0!
+        self.assertEqual(self.state["total_stars"], 2) # Cumulative stars are preserved!
+        stars_today = sum(1 for m in self.state["daily_missions"] if m["status"] == "Completed")
+        self.assertEqual(stars_today, 0)               # Stars today reset back to 0!
         self.assertEqual(self.state["streak"], 1)       # Streak incremented to 1 after rollover!
         
         # 4. Verify completed tasks moved to My Journey history log

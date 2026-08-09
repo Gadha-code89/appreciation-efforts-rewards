@@ -82,8 +82,9 @@ The parent dashboard is split into two administrative tabs:
 
 ## ⚙️ Core Concepts
 
-### 1. Daily Stars Reset
-Daily stars are treated as a daily count. Every day begins with a clean slate of **0 stars**. This teaches kids that each day is a new opportunity to try their best. All completed stars are safely archived into her **Lifetime Stars** tally under **My Journey**.
+### 1. Stars Tracking (Daily vs. Total)
+* **Stars Today**: The number of daily missions she has completed and had confirmed by you *today*. This count automatically resets to `0` at the start of each daily operating cycle.
+* **Total Stars**: Her lifetime cumulative star count. This count never resets, allowing her to watch her collection grow and feel proud of her long-term accomplishments over time.
 
 ### 2. 9:00 AM Local Rollover Cycle
 Instead of resetting at midnight (when the child is asleep), the application's operating cycle rolls over at **9:00 AM local time**. 
