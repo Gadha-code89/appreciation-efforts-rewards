@@ -21,7 +21,7 @@ from core.levels import get_level_info
 from agents_app.reporting_agent import run_daily_reporting_agent
 
 st.set_page_config(
-    page_title="Math Space",
+    page_title="My Little Wins",
     page_icon="🌱",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -184,7 +184,7 @@ missions = state.get("daily_missions", [])
 
 # ==================== PROFILE SELECTOR SCREEN ====================
 if st.session_state.user_role is None:
-    st.markdown('<div class="main-title">🌱 Math Space</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">🌱 My Little Wins</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">A place to grow, accomplish, and celebrate effort!</div>', unsafe_allow_html=True)
 
     col_child, col_parent = st.columns(2)
@@ -197,7 +197,7 @@ if st.session_state.user_role is None:
             <p style="color: #64748B; font-size: 0.95rem; margin-bottom: 20px;">Ready for today's accomplishments?</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("Go to Math Space 🚀", use_container_width=True, key="child_login_btn"):
+        if st.button("Go to My Little Wins 🚀", use_container_width=True, key="child_login_btn"):
             st.session_state.user_role = "child"
             st.rerun()
 
@@ -222,7 +222,7 @@ elif st.session_state.user_role == "child":
     # Header bar
     col_logo, col_switch = st.columns([3, 1])
     with col_logo:
-        st.markdown('<h2 style="margin: 0; color: #EC4899;">🌱 Math Space</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 style="margin: 0; color: #EC4899;">🌱 My Little Wins</h2>', unsafe_allow_html=True)
     with col_switch:
         if st.button("Switch Profile 🔄", use_container_width=True, key="switch_profile_btn_child"):
             switch_profile()
