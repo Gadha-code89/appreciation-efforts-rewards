@@ -1,5 +1,5 @@
 """
-tests/test_state.py - Unit tests for shared state management and 9 AM rollover.
+tests/test_state.py - Unit tests for shared state management, 9 AM rollover, and streak protection.
 """
 
 import unittest
@@ -21,36 +21,61 @@ class TestState(unittest.TestCase):
         eff_date = compute_effective_operating_date(dt)
         self.assertEqual(eff_date, "2026-08-06")
 
-    def test_rollover_resets_daily_counters_but_preserves_level(self):
-        # Create a state representing the previous operating day (using a static old date)
-        old_state = {
-            "effective_date": "2000-01-01",
-            "operating_day_start": "2000-01-01T09:00:00",
-            "current_level": 4,
-            "sessions_today": 3,
-            "minutes_banked": 45,
-            "total_stars": 150,
-            "streak": 5,
-            "unlocked_until": "2000-01-01T23:59:00",
-            "morning_battery_bonus_claimed": True,
-            "history": []
-        }
-
-        # Apply rollover check. Since current system time is ahead (2026-08-06 as of today),
-        # it should trigger a rollover.
-        new_state = check_and_apply_9am_rollover(old_state)
-
-        # Assert daily parameters are reset
-        self.assertEqual(new_state["sessions_today"], 0)
-        self.assertNotEqual(new_state["effective_date"], "2000-01-01")
+    def test_rollover_with_completed_missions_increments_streak(self):
+        # Create a state representing yesterday
+        state = get_default_state()
+        state["effective_date"] = "2000-01-01"
+        state["streak"] = 2
+        state["consecutive_rest_days"] = 0
+        state["tomorrow_reward"] = "30 mins of play"
         
-        # Level should be preserved
-        self.assertEqual(new_state["current_level"], 4)
+        # Complete one mission
+        state["daily_missions"][0]["status"] = "Completed"
+        completed_title = state["daily_missions"][0]["title"]
 
-        # Banked minutes, total stars, and streak should be preserved (minutes includes morning battery bonus of +5)
-        self.assertEqual(new_state["minutes_banked"], 50)
-        self.assertEqual(new_state["total_stars"], 150)
-        self.assertEqual(new_state["streak"], 5)
+        # Run rollover (current date is different from 2000-01-01)
+        new_state = check_and_apply_9am_rollover(state)
+
+        # Assert completed mission moved to journey
+        self.assertEqual(len(new_state["journey"]), 1)
+        self.assertEqual(new_state["journey"][0]["completed_missions"][0], completed_title)
+
+        # Streak should increment to 3
+        self.assertEqual(new_state["streak"], 3)
+        self.assertEqual(new_state["consecutive_rest_days"], 0)
+
+        # Tomorrow's reward shifts to yesterday's praise
+        self.assertEqual(new_state["yesterday_reward_praise"], "Yesterday you earned 30 mins of play! ❤️")
+        self.assertEqual(new_state["tomorrow_reward"], "")
+
+        # Daily missions status reset
+        self.assertEqual(new_state["daily_missions"][0]["status"], "Not reported")
+
+    def test_rollover_first_rest_day_preserves_streak(self):
+        state = get_default_state()
+        state["effective_date"] = "2000-01-01"
+        state["streak"] = 4
+        state["consecutive_rest_days"] = 0
+
+        # No missions completed today -> rest day
+        new_state = check_and_apply_9am_rollover(state)
+
+        # Streak should still be 4 (rest day protection)
+        self.assertEqual(new_state["streak"], 4)
+        self.assertEqual(new_state["consecutive_rest_days"], 1)
+
+    def test_rollover_second_rest_day_resets_streak(self):
+        state = get_default_state()
+        state["effective_date"] = "2000-01-01"
+        state["streak"] = 4
+        state["consecutive_rest_days"] = 1
+
+        # No missions completed -> second rest day in a row
+        new_state = check_and_apply_9am_rollover(state)
+
+        # Streak should reset to 0
+        self.assertEqual(new_state["streak"], 0)
+        self.assertEqual(new_state["consecutive_rest_days"], 2)
 
 
 if __name__ == "__main__":

@@ -9,8 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any
 
-from core.policy import evaluate_morning_battery_bonus
-from core.telemetry import get_mock_battery_telemetry
+from core.badges import evaluate_badges
 from core.logger import logger
 
 STATE_FILE = Path(__file__).parent / "device_state.json"
@@ -40,15 +39,53 @@ def get_default_state(effective_date: str = None) -> Dict[str, Any]:
     return {
         "effective_date": effective_date,
         "operating_day_start": f"{effective_date}T09:00:00",
-        "current_level": 1,
-        "current_test_in_level": 1,
-        "sessions_today": 0,
-        "minutes_banked": 0,
-        "unlocked_until": None,
-        "morning_battery_bonus_claimed": False,
-        "last_battery_check": None,
-        "last_completed_quiz": None,
-        "history": [],
+        
+        "total_stars": 0,
+        "streak": 0,
+        "consecutive_rest_days": 0,
+        
+        "parent_pin": "1234",
+        "yesterday_reward_praise": "",
+        "tomorrow_reward": "",
+        
+        "badges": [],
+        "daily_missions": [
+            {
+                "id": "tidy_room",
+                "title": "🧹 Tidy your room",
+                "why": "💡 Responsibility is key!",
+                "status": "Not reported",
+                "praise": "",
+                "category": "helpful"
+            },
+            {
+                "id": "reading",
+                "title": "📚 Read for 20 minutes",
+                "why": "💡 Grow your reading power!",
+                "status": "Not reported",
+                "praise": "",
+                "category": "learning"
+            },
+            {
+                "id": "homework",
+                "title": "✏️ Finish your homework",
+                "why": "💡 Keep your brain sharp!",
+                "status": "Not reported",
+                "praise": "",
+                "category": "learning"
+            },
+            {
+                "id": "math_mission",
+                "title": "🗺️ Complete Math Mission",
+                "why": "💡 Grow your math muscles!",
+                "status": "Not reported",
+                "praise": "",
+                "category": "learning",
+                "math_attempts": []
+            }
+        ],
+        "journey": [],
+        
         "api_status": {
             "openai_api_configured": bool(os.getenv("OPENAI_API_KEY")),
             "resend_api_configured": bool(os.getenv("RESEND_API_KEY"))
@@ -99,56 +136,69 @@ def load_state() -> Dict[str, Any]:
         return state
 
 
-# check_and_apply_screentime_expiration removed (no parental lockouts or screen time limits)
-
-
 def check_and_apply_9am_rollover(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Check if the current effective 9:00 AM operating date has advanced.
     If a new day started:
-      1. Preserve minutes_banked, total_stars, and streak across day boundaries.
-      2. Reset sessions_today to 0.
-      3. Reset morning_battery_bonus_claimed to False.
-      4. Run morning battery check (>50% awards +5 bonus minutes).
-      5. PRESERVE current_level (level progress persists across days).
+      1. Move completed daily missions to the journey log.
+      2. Manage streak:
+         - If >=1 mission completed: Streak incremented, consecutive_rest_days set to 0.
+         - If 0 missions completed: Streak is protected on day 1 (consecutive_rest_days = 1).
+           If they fail to complete anything on day 2, streak resets to 0.
+      3. Shift tomorrow_reward into yesterday_reward_praise.
+      4. Reset daily variables & status to "Not reported".
     """
     current_effective_date = compute_effective_operating_date()
     state_effective_date = state.get("effective_date", "")
 
     if state_effective_date != current_effective_date:
-        # Save preserved values
-        preserved_level = state.get("current_level", 1)
-        preserved_test = state.get("current_test_in_level", 1)
-        preserved_minutes = state.get("minutes_banked", 0)
-        preserved_stars = state.get("total_stars", 120)
-        preserved_streak = state.get("streak", 3)
-        history = state.get("history", [])
+        completed_today = [
+            m["title"]
+            for m in state.get("daily_missions", [])
+            if m.get("status") == "Completed"
+        ]
+        
+        stars_today = len(completed_today)
 
-        # Reset daily variables
+        # 1. Update Journey Log
+        if completed_today:
+            journey_entry = {
+                "date": state_effective_date,
+                "completed_missions": completed_today,
+                "stars_earned": stars_today
+            }
+            state.setdefault("journey", []).append(journey_entry)
+            
+            # 2. Update Streak (completed tasks)
+            state["streak"] = state.get("streak", 0) + 1
+            state["consecutive_rest_days"] = 0
+            
+            # Evaluate new badges
+            state = evaluate_badges(state)
+        else:
+            # Rest day!
+            state["consecutive_rest_days"] = state.get("consecutive_rest_days", 0) + 1
+            if state["consecutive_rest_days"] >= 2:
+                state["streak"] = 0
+
+        # 3. Shift Tomorrow's Reward to Yesterday's Praise
+        tomorrow_reward = state.get("tomorrow_reward", "").strip()
+        if tomorrow_reward:
+            state["yesterday_reward_praise"] = f"Yesterday you earned {tomorrow_reward}! ❤️"
+        else:
+            state["yesterday_reward_praise"] = ""
+
+        # 4. Reset Daily State
+        state["total_stars"] = 0
+        state["tomorrow_reward"] = ""
         state["effective_date"] = current_effective_date
         state["operating_day_start"] = f"{current_effective_date}T09:00:00"
-        state["current_level"] = preserved_level
-        state["current_test_in_level"] = preserved_test
-        state["sessions_today"] = 0
-        state["minutes_banked"] = preserved_minutes
-        state["total_stars"] = preserved_stars
-        state["streak"] = preserved_streak
-        state["unlocked_until"] = None
-        state["morning_battery_bonus_claimed"] = False
-
-        # Run Morning Battery Bonus check for the new day
-        battery_info = get_mock_battery_telemetry()
-        bonus_eval = evaluate_morning_battery_bonus(battery_info.get("charge_percent", 0))
-
-        if bonus_eval["eligible"]:
-            state["minutes_banked"] += bonus_eval["bonus_minutes"]
-            state["morning_battery_bonus_claimed"] = True
-
-        state["last_battery_check"] = {
-            "timestamp": datetime.now().isoformat(),
-            "charge_percent": battery_info.get("charge_percent", 0),
-            "bonus_awarded": bonus_eval["bonus_minutes"],
-            "message": bonus_eval["message"]
-        }
+        
+        # Reset daily missions status
+        for m in state.get("daily_missions", []):
+            m["status"] = "Not reported"
+            m["praise"] = ""
+            if "math_attempts" in m:
+                m["math_attempts"] = []
 
     return state
