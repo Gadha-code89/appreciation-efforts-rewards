@@ -39,10 +39,14 @@ This is the core daily checklist. It shows her daily missions (e.g. *Tidy your r
   - She can submit her quiz at any point for parent review.
 
 ### 2. 📚 READING LOG
-A dedicated reading log page where she can archive the books she reads:
-* **Log a Book**: Enter the book's title and author, then click **"Log Book 📖"** to add it to her bookshelf.
-* **Auto-completion**: Logging a book automatically triggers completion for today's daily reading checklist mission, updating its status to `"Pending Confirmation"`.
-* **📖 MY BOOKSHELF**: A beautiful collection of purple bookshelf cards displaying all the books she has read and the dates they were logged.
+A dedicated reading log page where she can track and archive her books:
+* **Log a Book**: Enter the book's title and author, select its status (`In Progress` or `Completed`), and click **"Log Book 📖"** to add it to her bookshelf.
+* **Status Badges & Controls**:
+  - `📖 In Progress`: Displayed for books she is currently reading. She can tap the **"I Finished It! 🏆"** button under the card when she completes the book to submit it to you.
+  - `⏳ Waiting for Approval`: Shown once she completes a book and is waiting for parent confirmation.
+  - `🏆 Completed`: Shown once you confirm her completion.
+* **Auto-completion**: Logging a book automatically triggers completion for today's daily `"📚 Read for 20 minutes"` checklist mission.
+* **📖 MY BOOKSHELF**: A beautiful list of bookshelf cards displaying book titles, authors, logging dates, and status badges.
 
 ### 3. 🏆 MY JOURNEY
 Displays long-term progress:
@@ -73,6 +77,7 @@ The parent dashboard is split into two administrative tabs:
   - **Encouragement Praise**: You can type a custom praise message (e.g., *"You did a fantastic job cleaning up the blocks! ❤️"*).
   - **Confirm & Add Star ⭐**: Approving a task increments her daily stars count, saves your praise on her screen, and triggers confetti balloons!
   - **Needs More Work 🔄**: Resets the task status back to `"Not reported"` if she needs to spend a little more time on it.
+* **Finished Books (Pending Approval)**: Review completed books submitted by your daughter. Type a custom reading praise note (e.g., *"Awesome job finishing Harry Potter! ❤️"*) and click **"Confirm Book & Award Star ⭐"** to award her an **extra star** (directly added to her total stars count) on top of her daily checklist stars. Or click **"Still In Progress 🔄"** to reset it.
 
 ### 2. ⚙️ CONFIGURATION & SETTINGS
 * **Tomorrow's Reward**: Enter a custom reward (e.g., *"30 minutes of iPad time"* or *"Trip to the park"*) that will be displayed in her Rewards tab.

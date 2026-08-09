@@ -421,13 +421,18 @@ elif st.session_state.user_role == "child":
         with st.form("add_book_form"):
             book_title = st.text_input("Book Title:", placeholder="Enter the name of the book you read...")
             book_author = st.text_input("Author (optional):", placeholder="Who wrote the book?")
+            book_status = st.selectbox("Current Status:", ["In Progress 📖", "Completed 🏆"])
             submitted_book = st.form_submit_button("Log Book 📖", type="primary", use_container_width=True)
             
             if submitted_book:
                 if book_title.strip():
+                    status_val = "In Progress" if "In Progress" in book_status else "Completed (Pending Confirmation)"
                     book_entry = {
+                        "id": f"b_{int(datetime.now().timestamp())}",
                         "title": book_title.strip(),
                         "author": book_author.strip(),
+                        "status": status_val,
+                        "praise": "",
                         "date": datetime.now().strftime("%Y-%m-%d")
                     }
                     state.setdefault("reading_log", []).append(book_entry)
@@ -452,14 +457,43 @@ elif st.session_state.user_role == "child":
         if not reading_log:
             st.info("Your bookshelf is empty. Log your first book above! 🌟")
         else:
-            for book in reversed(reading_log):
+            for idx, book in enumerate(reversed(reading_log)):
                 author_text = f" by {book['author']}" if book.get('author') else ""
+                
+                # Setup status badge color and text
+                status = book.get("status", "In Progress")
+                if status == "In Progress":
+                    badge_html = '<span style="background-color: #FEF3C7; color: #D97706; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">📖 In Progress</span>'
+                elif status == "Completed (Pending Confirmation)":
+                    badge_html = '<span style="background-color: #DBEAFE; color: #2563EB; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">⏳ Waiting for Approval</span>'
+                else:
+                    badge_html = '<span style="background-color: #D1FAE5; color: #059669; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">🏆 Completed</span>'
+                
                 st.markdown(f"""
-                <div class="card" style="border-left: 6px solid #8B5CF6; padding: 15px !important;">
-                    <div style="font-size: 1.2rem; font-weight: bold; color: #6D28D9;">📘 {book['title']}{author_text}</div>
-                    <div style="font-size: 0.85rem; color: #6B7280; margin-top: 5px;">Logged on: {book['date']}</div>
+                <div class="card" style="border-left: 6px solid #8B5CF6; padding: 15px !important; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="font-size: 1.25rem; font-weight: bold; color: #6D28D9;">📘 {book['title']}{author_text}</div>
+                        {badge_html}
+                    </div>
+                    <div style="font-size: 0.85rem; color: #6B7280;">Logged on: {book['date']}</div>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                # Show complete button if in progress
+                if status == "In Progress":
+                    if st.button(f"I Finished It! 🏆", key=f"finish_book_btn_{book.get('id', idx)}", use_container_width=True):
+                        book["status"] = "Completed (Pending Confirmation)"
+                        # Auto-complete daily reading mission if it exists and is not completed
+                        for m in missions:
+                            if m["id"] == "reading" and m["status"] == "Not reported":
+                                state = complete_mission("reading", state)
+                                m["status"] = "Pending Confirmation"
+                        save_state(state)
+                        st.balloons()
+                        st.success(f"Marked '{book['title']}' as finished! Tell Mom or Dad to confirm. 🌟")
+                        st.rerun()
+                elif status == "Completed" and book.get("praise"):
+                    st.markdown(f"💬 **Mom/Dad says:** *\"{book['praise']}\"*")
 
     # ---------- JOURNEY TAB ----------
     with tab_journey:
@@ -597,6 +631,46 @@ elif st.session_state.user_role == "parent":
                 with col_reject:
                     if st.button("Needs More Work 🔄", key=f"reject_btn_{item['id']}", use_container_width=True):
                         item["status"] = "Not reported"
+                        save_state(state)
+                        st.rerun()
+
+        # Pending Book Completions
+        st.write("")
+        st.subheader("📚 Finished Books (Pending Approval)")
+        
+        reading_log = state.setdefault("reading_log", [])
+        pending_books = [book for book in reading_log if book.get("status") == "Completed (Pending Confirmation)"]
+        
+        if not pending_books:
+            st.info("No completed books pending approval right now.")
+        else:
+            for book in pending_books:
+                author_text = f" by {book['author']}" if book.get('author') else ""
+                st.markdown(f"""
+                <div class="card" style="border-left: 6px solid #8B5CF6; padding: 15px !important;">
+                    <div style="font-size: 1.15rem; font-weight: bold; color: #6D28D9;">📘 {book['title']}{author_text}</div>
+                    <div style="font-size: 0.85rem; color: #6B7280;">Logged on: {book['date']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                book_praise = st.text_input(
+                    "Add a message of praise for finishing this book:",
+                    value=f"Fantastic job reading '{book['title']}'! I'm so proud of you! ❤️",
+                    key=f"book_praise_input_{book['id']}"
+                )
+                
+                b_approve, b_reject = st.columns(2)
+                with b_approve:
+                    if st.button("Confirm Book & Award Star ⭐", key=f"book_approve_btn_{book['id']}", type="primary", use_container_width=True):
+                        book["status"] = "Completed"
+                        book["praise"] = book_praise.strip()
+                        state["total_stars"] = state.get("total_stars", 0) + 1
+                        save_state(state)
+                        st.balloons()
+                        st.rerun()
+                with b_reject:
+                    if st.button("Still In Progress 🔄", key=f"book_reject_btn_{book['id']}", use_container_width=True):
+                        book["status"] = "In Progress"
                         save_state(state)
                         st.rerun()
 

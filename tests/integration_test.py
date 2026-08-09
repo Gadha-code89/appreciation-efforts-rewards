@@ -120,6 +120,34 @@ class TestMyLittleWinsIntegration(unittest.TestCase):
         self.assertEqual(len(self.state["reading_log"]), 1)
         self.assertEqual(self.state["reading_log"][0]["title"], "Charlotte's Web")
 
+    def test_book_completion_approval_by_parent(self):
+        # 1. Simulate logging an in-progress book
+        book_id = "b_test_1"
+        self.state.setdefault("reading_log", []).append({
+            "id": book_id,
+            "title": "Harry Potter",
+            "author": "J.K. Rowling",
+            "status": "In Progress",
+            "praise": "",
+            "date": datetime.now().strftime("%Y-%m-%d")
+        })
+
+        # 2. Child finishes it (marks as pending confirmation)
+        book_entry = self.state["reading_log"][0]
+        self.assertEqual(book_entry["status"], "In Progress")
+        book_entry["status"] = "Completed (Pending Confirmation)"
+
+        # 3. Parent approves and awards extra star
+        praise_msg = "Outstanding reading! ❤️"
+        book_entry["status"] = "Completed"
+        book_entry["praise"] = praise_msg
+        self.state["total_stars"] = self.state.get("total_stars", 0) + 1
+
+        # Verify state updates
+        self.assertEqual(self.state["reading_log"][0]["status"], "Completed")
+        self.assertEqual(self.state["reading_log"][0]["praise"], praise_msg)
+        self.assertEqual(self.state["total_stars"], 1) # Extra star awarded!
+
 
 if __name__ == "__main__":
     unittest.main()
