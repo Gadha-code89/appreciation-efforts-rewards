@@ -1,0 +1,21 @@
+# Environment & Secrets
+.env
+*.env
+
+# Python / Pytest caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# State & Local Data Logs
+core/device_state.json
+core/.device_state.json.tmp
+reports/*.html
+reports/*.log
+!reports/.gitkeep
+
+# IDE / System files
+.DS_Store
+.idea/
+.vscode/
