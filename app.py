@@ -179,7 +179,7 @@ state = load_state()
 streak = state.get("streak", 0)
 total_stars = state.get("total_stars", 0)
 badges = state.get("badges", [])
-missions = state.get("daily_missions", [])
+missions = state.setdefault("daily_missions", [])
 
 
 # ==================== PROFILE SELECTOR SCREEN ====================
