@@ -259,8 +259,9 @@ elif st.session_state.user_role == "child":
         st.info(f"🌟 {yesterday_reward}")
 
     # Tabs definition
-    tab_today, tab_journey, tab_rewards = st.tabs([
+    tab_today, tab_reading, tab_journey, tab_rewards = st.tabs([
         "🏠 TODAY",
+        "📚 READING LOG",
         "🏆 MY JOURNEY",
         "🎁 MY REWARDS"
     ])
@@ -410,6 +411,55 @@ elif st.session_state.user_role == "child":
                 praise_text = m.get("praise", "").strip()
                 if praise_text:
                     st.markdown(f"💬 **Mom/Dad says:** *\"{praise_text}\"*")
+
+    # ---------- READING LOG TAB ----------
+    with tab_reading:
+        st.markdown('<div style="font-size: 1.6rem; font-family:\'Fredoka One\'; margin-bottom:15px;">📚 MY READING LOG</div>', unsafe_allow_html=True)
+        st.write("Record the books you are reading to build your bookshelf! 📖")
+        
+        # Form to add a book
+        with st.form("add_book_form"):
+            book_title = st.text_input("Book Title:", placeholder="Enter the name of the book you read...")
+            book_author = st.text_input("Author (optional):", placeholder="Who wrote the book?")
+            submitted_book = st.form_submit_button("Log Book 📖", type="primary", use_container_width=True)
+            
+            if submitted_book:
+                if book_title.strip():
+                    book_entry = {
+                        "title": book_title.strip(),
+                        "author": book_author.strip(),
+                        "date": datetime.now().strftime("%Y-%m-%d")
+                    }
+                    state.setdefault("reading_log", []).append(book_entry)
+                    
+                    # Auto-complete daily reading mission if it exists and is not completed
+                    for m in missions:
+                        if m["id"] == "reading" and m["status"] == "Not reported":
+                            state = complete_mission("reading", state)
+                            m["status"] = "Pending Confirmation"
+                    
+                    save_state(state)
+                    st.balloons()
+                    st.success(f"Added '{book_title.strip()}' to your bookshelf! 🌟")
+                    st.rerun()
+                else:
+                    st.error("Please enter a book title!")
+                    
+        st.markdown("---")
+        st.markdown('<div style="font-size: 1.4rem; font-family:\'Fredoka One\'; margin-bottom:10px;">📖 MY BOOKSHELF</div>', unsafe_allow_html=True)
+        
+        reading_log = state.get("reading_log", [])
+        if not reading_log:
+            st.info("Your bookshelf is empty. Log your first book above! 🌟")
+        else:
+            for book in reversed(reading_log):
+                author_text = f" by {book['author']}" if book.get('author') else ""
+                st.markdown(f"""
+                <div class="card" style="border-left: 6px solid #8B5CF6; padding: 15px !important;">
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #6D28D9;">📘 {book['title']}{author_text}</div>
+                    <div style="font-size: 0.85rem; color: #6B7280; margin-top: 5px;">Logged on: {book['date']}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
     # ---------- JOURNEY TAB ----------
     with tab_journey:

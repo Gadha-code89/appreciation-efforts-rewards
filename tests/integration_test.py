@@ -94,6 +94,32 @@ class TestMyLittleWinsIntegration(unittest.TestCase):
         self.assertIn("🧹 Tidy your room", history_entry["completed_missions"])
         self.assertIn("📚 Read for 20 minutes", history_entry["completed_missions"])
 
+    def test_reading_log_auto_completes_daily_mission(self):
+        # Verify reading mission starts as Not reported
+        reading_m = next(m for m in self.state["daily_missions"] if m["id"] == "reading")
+        self.assertEqual(reading_m["status"], "Not reported")
+
+        # Simulate logging a book (as done in app.py)
+        book_title = "Charlotte's Web"
+        book_author = "E.B. White"
+        self.state.setdefault("reading_log", []).append({
+            "title": book_title,
+            "author": book_author,
+            "date": datetime.now().strftime("%Y-%m-%d")
+        })
+
+        # Check daily reading mission auto-completes
+        for m in self.state["daily_missions"]:
+            if m["id"] == "reading" and m["status"] == "Not reported":
+                self.state = complete_mission("reading", self.state)
+                m["status"] = "Pending Confirmation"
+
+        # Verify state updates
+        reading_m = next(m for m in self.state["daily_missions"] if m["id"] == "reading")
+        self.assertEqual(reading_m["status"], "Pending Confirmation")
+        self.assertEqual(len(self.state["reading_log"]), 1)
+        self.assertEqual(self.state["reading_log"][0]["title"], "Charlotte's Web")
+
 
 if __name__ == "__main__":
     unittest.main()

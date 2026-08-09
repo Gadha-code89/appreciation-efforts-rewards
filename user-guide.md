@@ -19,7 +19,7 @@ To switch profiles at any time, simply click the **Switch Profile 🔄** button 
 
 ## 👧 The Child View (Play & Progress)
 
-The child's experience is split into three playful tabs:
+The child's experience is split into four playful tabs:
 
 ### 1. 🏠 TODAY
 This is the core daily checklist. It shows her daily missions (e.g. *Tidy your room*, *Read for 20 minutes*, *Complete Math Mission*).
@@ -38,7 +38,13 @@ This is the core daily checklist. It shows her daily missions (e.g. *Tidy your r
     - **🏆 Mastered**: Achieved a perfect 10/10.
   - She can submit her quiz at any point for parent review.
 
-### 2. 🏆 MY JOURNEY
+### 2. 📚 READING LOG
+A dedicated reading log page where she can archive the books she reads:
+* **Log a Book**: Enter the book's title and author, then click **"Log Book 📖"** to add it to her bookshelf.
+* **Auto-completion**: Logging a book automatically triggers completion for today's daily reading checklist mission, updating its status to `"Pending Confirmation"`.
+* **📖 MY BOOKSHELF**: A beautiful collection of purple bookshelf cards displaying all the books she has read and the dates they were logged.
+
+### 3. 🏆 MY JOURNEY
 Displays long-term progress:
 * **Lifetime Stars Collected 🌟**: A golden card accumulating every star she has ever earned. Unlike daily progress, this number never resets!
 * **Badge Collection 🏅**: A visual grid of achievement badges:
@@ -51,7 +57,7 @@ Displays long-term progress:
   - Locked badges are displayed in gray with a lock symbol `🔒` to encourage continued effort.
 * **Journey History**: A timeline log of past days showing what dates she completed tasks, what she accomplished, and how many stars were earned.
 
-### 3. 🎁 MY REWARDS
+### 4. 🎁 MY REWARDS
 * Displays **yesterday's earned reward** (e.g. *"Yesterday you earned 30 minutes of play time! ❤️"*).
 * Shows a preview of **tomorrow's reward** that the parent is planning (e.g., *"Tomorrow's Reward: 30 minutes of Minecraft"*), serving as a motivating bridge between effort and reward.
 

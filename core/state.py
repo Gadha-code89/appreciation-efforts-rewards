@@ -85,6 +85,7 @@ def get_default_state(effective_date: str = None) -> Dict[str, Any]:
             }
         ],
         "journey": [],
+        "reading_log": [],
         
         "api_status": {
             "openai_api_configured": bool(os.getenv("OPENAI_API_KEY")),
