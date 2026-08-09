@@ -568,7 +568,7 @@ elif st.session_state.user_role == "parent":
                 # Check if title already starts with an emoji/non-alphanumeric character
                 title_val = new_title.strip()
                 if title_val and title_val[0].isalnum():
-                    default_emoji = "🧹" if new_cat == "helpful" else "📚"
+                    default_emoji = "❤️"
                     title_val = f"{default_emoji} {title_val}"
 
                 missions.append({
