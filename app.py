@@ -162,6 +162,18 @@ st.markdown("""
             border-color: #334155 !important;
         }
     }
+
+    /* Hide Streamlit Community Cloud headers, menus, and footers */
+    header[data-testid="stHeader"], 
+    header, 
+    #MainMenu, 
+    footer, 
+    .viewerBadge_container__172w2,
+    div[data-testid="stHeader"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
