@@ -564,9 +564,16 @@ elif st.session_state.user_role == "parent":
         if st.button("Add Mission ➕"):
             if new_title.strip() and new_why.strip():
                 new_id = f"m_{int(datetime.now().timestamp())}"
+                
+                # Check if title already starts with an emoji/non-alphanumeric character
+                title_val = new_title.strip()
+                if title_val and title_val[0].isalnum():
+                    default_emoji = "🧹" if new_cat == "helpful" else "📚"
+                    title_val = f"{default_emoji} {title_val}"
+
                 missions.append({
                     "id": new_id,
-                    "title": new_title.strip(),
+                    "title": title_val,
                     "why": new_why.strip(),
                     "status": "Not reported",
                     "praise": "",
