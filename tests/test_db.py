@@ -1,0 +1,122 @@
+"""
+tests/test_db.py - Unit tests for Supabase database operations using mock data.
+"""
+
+import unittest
+from unittest.mock import MagicMock, patch
+from datetime import date
+import core.db as db
+
+
+class TestSupabaseDatabaseDriver(unittest.TestCase):
+
+    def setUp(self):
+        # Create a mock supabase client
+        self.mock_client = MagicMock()
+        db.supabase = self.mock_client
+
+    def tearDown(self):
+        db.supabase = None
+
+    def test_is_db_enabled(self):
+        self.assertTrue(db.is_db_enabled())
+        db.supabase = None
+        self.assertFalse(db.is_db_enabled())
+
+    def test_login_family_success(self):
+        # Mock database response
+        mock_response = MagicMock()
+        mock_response.data = [{"family_id": "fam_123", "username": "smiths", "password_hash": "pass", "parent_pin": "1111"}]
+        
+        # Setup mock method calls chaining: table().select().eq().execute()
+        self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+
+        family = db.login_family("smiths", "pass")
+        self.assertIsNotNone(family)
+        self.assertEqual(family["family_id"], "fam_123")
+        self.mock_client.table.assert_called_with("families")
+
+    def test_login_family_invalid_password(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"family_id": "fam_123", "username": "smiths", "password_hash": "pass", "parent_pin": "1111"}]
+        self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+
+        family = db.login_family("smiths", "wrong_pass")
+        self.assertNil = self.assertIsNone(family)
+
+    def test_register_family(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"family_id": "fam_456", "username": "jones", "parent_pin": "9999"}]
+        self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_response
+
+        family = db.register_family("jones", "pass123", "9999")
+        self.assertIsNotNone(family)
+        self.assertEqual(family["family_id"], "fam_456")
+        self.mock_client.table.assert_called_with("families")
+
+    def test_update_parent_pin(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"family_id": "fam_123", "parent_pin": "7777"}]
+        self.mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_response
+
+        success = db.update_parent_pin("fam_123", "7777")
+        self.assertTrue(success)
+
+    def test_get_children(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"child_id": "c1", "name": "Alice"}, {"child_id": "c2", "name": "Bob"}]
+        self.mock_client.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = mock_response
+
+        children = db.get_children("fam_123")
+        self.assertEqual(len(children), 2)
+        self.assertEqual(children[0]["name"], "Alice")
+
+    def test_register_child(self):
+        mock_child = [{"child_id": "c_999", "name": "Jerry", "grade_level": 4, "current_level": 2}]
+        mock_res1 = MagicMock()
+        mock_res1.data = mock_child
+        self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_res1
+
+        child = db.register_child("fam_123", "Jerry", 4, 2)
+        self.assertIsNotNone(child)
+        self.assertEqual(child["child_id"], "c_999")
+
+    def test_get_daily_missions(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"mission_id": "m1", "title": "Tidy Room", "status": "Not reported"}]
+        self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+
+        missions = db.get_daily_missions("c_999")
+        self.assertEqual(len(missions), 1)
+        self.assertEqual(missions[0]["title"], "Tidy Room")
+
+    def test_complete_mission_db(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"mission_id": "m1", "status": "Pending Confirmation"}]
+        self.mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_response
+
+        success = db.complete_mission_db("m1")
+        self.assertTrue(success)
+
+    def test_log_book_db(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"book_id": "b1", "title": "Charlotte's Web", "status": "In Progress"}]
+        self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_response
+
+        book = db.log_book_db("c_999", "Charlotte's Web", "E.B. White", "In Progress")
+        self.assertIsNotNone(book)
+        self.assertEqual(book["title"], "Charlotte's Web")
+
+    def test_get_child_badges(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"badge_catalog_id": "first_step"}, {"badge_catalog_id": "on_fire"}]
+        self.mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+
+        badges = db.get_child_badges("c_999")
+        self.assertEqual(len(badges), 2)
+        self.assertIn("first_step", badges)
+        self.assertIn("on_fire", badges)
+
+
+if __name__ == "__main__":
+    unittest.main()
