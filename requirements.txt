@@ -4,3 +4,5 @@ streamlit>=1.30.0
 resend>=0.8.0
 python-dotenv>=1.0.0
 pytest>=8.0.0
+supabase>=2.31.0
+
