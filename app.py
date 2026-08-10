@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.0.8
+# Hot-reload force touch: v1.0.9
 """
 
 import streamlit as st

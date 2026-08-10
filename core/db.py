@@ -129,6 +129,12 @@ def register_child(family_id: str, name: str, grade_level: int, start_level: int
     if not is_db_enabled():
         return None
     try:
+        # Check if child with the same name already exists in this family to prevent duplicates
+        existing = supabase.table("children").select("child_id").eq("family_id", family_id).eq("name", name.strip()).execute()
+        if existing.data:
+            res_child = supabase.table("children").select("*").eq("child_id", existing.data[0]["child_id"]).execute()
+            return res_child.data[0] if res_child.data else None
+
         child_data = {
             "family_id": family_id,
             "name": name.strip(),
@@ -426,6 +432,14 @@ def log_book_db(child_id: str, title: str, author: str, status: str) -> Dict[str
         if not child:
             return None
 
+        # Check if book is already logged for this child to prevent duplicates
+        existing = supabase.table("reading_logs").select("*").eq("child_id", child_id).eq("title", title.strip()).eq("author", author.strip() if author else "").execute()
+        if existing.data:
+            b = existing.data[0]
+            b["id"] = b["book_id"]
+            b["date"] = str(b.get("logged_date", date.today().isoformat()))
+            return b
+
         data = {
             "child_id": child_id,
             "title": title.strip(),
@@ -526,6 +540,11 @@ def unlock_badge_db(child_id: str, badge_catalog_id: str) -> bool:
         child = get_child_by_id(child_id)
         if not child:
             return False
+
+        # Check if the child already has this badge to prevent duplicates
+        existing = supabase.table("child_badges").select("badge_catalog_id").eq("child_id", child_id).eq("badge_catalog_id", badge_catalog_id).execute()
+        if existing.data:
+            return True
 
         res = supabase.table("child_badges").insert({
             "child_id": child_id,
@@ -655,6 +674,12 @@ def start_math_attempt_db(child_id: str, level: int) -> str:
     if not is_db_enabled():
         return ""
     try:
+        # Check if there is already an active attempt (status = 'started') for this child at this level
+        # to prevent duplicate start attempts on double-click
+        existing = supabase.table("math_attempts_log").select("attempt_id").eq("child_id", child_id).eq("level", level).eq("status", "started").execute()
+        if existing.data:
+            return existing.data[0]["attempt_id"]
+
         # Calculate attempt number in python for safety
         res_attempts = supabase.table("math_attempts_log").select("attempt_id").eq("child_id", child_id).eq("level", level).execute()
         attempt_num = len(res_attempts.data or []) + 1

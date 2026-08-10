@@ -72,6 +72,11 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
         self.assertEqual(children[0]["name"], "Alice")
 
     def test_register_child(self):
+        # Mock children name check (doesn't exist)
+        mock_exist_res = MagicMock()
+        mock_exist_res.data = []
+        self.mock_client.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = mock_exist_res
+
         mock_child = [{"child_id": "c_999", "name": "Jerry", "grade_level": 4, "current_level": 2}]
         mock_res1 = MagicMock()
         mock_res1.data = mock_child
@@ -99,6 +104,11 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
         self.assertTrue(success)
 
     def test_log_book_db(self):
+        # Mock book check (doesn't exist)
+        mock_exist_res = MagicMock()
+        mock_exist_res.data = []
+        self.mock_client.table.return_value.select.return_value.eq.return_value.eq.return_value.eq.return_value.execute.return_value = mock_exist_res
+
         mock_response = MagicMock()
         mock_response.data = [{"book_id": "b1", "title": "Charlotte's Web", "status": "In Progress", "logged_date": "2026-08-10"}]
         self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_response
@@ -174,12 +184,19 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
         self.mock_client.table.assert_any_call("mission_history")
     def test_math_attempts_logging(self):
         # 1. Test start_math_attempt_db
+        # Mock active check (no active attempt)
+        mock_active_res = MagicMock()
+        mock_active_res.data = []
+        self.mock_client.table.return_value.select.return_value.eq.return_value.eq.return_value.eq.return_value.execute.return_value = mock_active_res
+
+        # Mock count check (existing attempts)
         mock_select_res = MagicMock()
         mock_select_res.data = [{"attempt_id": "att_1"}, {"attempt_id": "att_2"}]
+        self.mock_client.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = mock_select_res
+
+        # Mock insert
         mock_insert_res = MagicMock()
         mock_insert_res.data = [{"attempt_id": "att_3"}]
-
-        self.mock_client.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = mock_select_res
         self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_insert_res
 
         attempt_id = db.start_math_attempt_db("c_999", 2)
