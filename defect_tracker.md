@@ -1,0 +1,21 @@
+# Defect Tracker
+
+This document tracks all the database, timezone, state-mismatch, and interface defects identified and resolved during development.
+
+---
+
+## 📋 Summary of Resolved Defects
+
+| ID | Defect Description | Impact / Symptom | Root Cause | Resolution | Status |
+|---|---|---|---|---|---|
+| **DF-01** | Missing `supabase` dependency | Cloud deployment builds failed to start. | `supabase` python client package was missing from `requirements.txt`. | Added `supabase>=2.31.0` to [requirements.txt](file:///Users/gadhamuralikrishnan/Documents/PROJECT/appreciation-of-efforts-app/requirements.txt). | **Resolved** |
+| **DF-02** | Silent DB permission failures | Database inserts/updates failed without visible logs. | Exceptions inside DB driver helper calls were caught silently without error outputs. | Added raw database exception logging prints in [core/db.py](file:///Users/gadhamuralikrishnan/Documents/PROJECT/appreciation-of-efforts-app/core/db.py). | **Resolved** |
+| **DF-03** | Mission ID key mismatch | Daily checklist tab failed to fetch mission statuses. | DB column name was `mission_id` but frontend code expected `"id"`. | Added key mapping in `db.get_daily_missions` to map `mission_id` $\rightarrow$ `"id"`. | **Resolved** |
+| **DF-04** | Bookshelf Log date/id mismatches | Reading tab bookshelf failed with `KeyError: 'date'`. | DB columns `book_id` and `logged_date` did not match expected frontend keys `"id"` and `"date"`. | Mapped `book_id` $\rightarrow$ `"id"` and `logged_date` $\rightarrow$ `"date"` in `db.get_reading_logs`. | **Resolved** |
+| **DF-05** | Parent approval loop crash | Parent view crashed with `NameError: name 'idx' is not defined`. | Loop variable `idx` was referenced inside a button callback without being defined in the loop. | Enumerated the loop in [app.py](file:///Users/gadhamuralikrishnan/Documents/PROJECT/appreciation-of-efforts-app/app.py) (`for idx, book in enumerate(pending_books)`). | **Resolved** |
+| **DF-06** | Test date subtraction flakiness | Automated integration tests failed depending on the time of day. | Tests subtracted calendar dates directly, which flaked across UTC rollover hours. | Updated [tests/integration_test.py](file:///Users/gadhamuralikrishnan/Documents/PROJECT/appreciation-of-efforts-app/tests/integration_test.py) to calculate relative test dates. | **Resolved** |
+| **DF-07** | Math retry attempt logging skip | Math attempt scores of 10/10 on retries were not logged in `math_attempts_log`. | Starting a quiz from the "Try Again" screen skipped starting a new DB attempt record. | Added `start_math_attempt_db` initialization on clicking `"Try Again 💪"` in [app.py](file:///Users/gadhamuralikrishnan/Documents/PROJECT/appreciation-of-efforts-app/app.py). | **Resolved** |
+| **DF-08** | Cloud timezone rollover mismatch | Rollover failed to trigger because the server uses UTC date. | Server UTC date matched last login date, skipping Mountain Time day changes. | Implemented timezone-aware `get_local_operating_date()` based on MDT and 12 PM (noon) cycle. | **Resolved** |
+| **DF-09** | Rollover duplicate insertion loop | Force Rollover button inserted dozens of duplicate records. | Database insert crashed midway on missing `mission_history` table, failing to update last login date. | Added defensive duplicate select queries and isolated inserts in try-except blocks. | **Resolved** |
+| **DF-10** | Level up badge defect | Unlocked the 50-star "Growing Star" badge on math graduation. | Hardcoded badge unlock call in [app.py](file:///Users/gadhamuralikrishnan/Documents/PROJECT/appreciation-of-efforts-app/app.py) bypassed the star-count rules engine. | Replaced hardcoded unlock with dynamic `db.evaluate_badges_db` checking all criteria. | **Resolved** |
+| **DF-11** | Streamlit process caching bug | `AttributeError: core.db has no attribute evaluate_badges_db`. | Streamlit Cloud running process kept old modules in memory. | Added dynamic `importlib.reload` calls for all core submodules at the top of [app.py](file:///Users/gadhamuralikrishnan/Documents/PROJECT/appreciation-of-efforts-app/app.py). | **Resolved** |
