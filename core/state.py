@@ -20,16 +20,14 @@ _state_lock = threading.RLock()
 
 def compute_effective_operating_date(now: datetime = None) -> str:
     """
-    Compute effective operating date based on 12:00 PM to 12:00 PM local time cycle.
-    Times before 12:00 PM count as part of previous calendar day's operating cycle.
+    Compute effective operating date based on 12:00 AM (midnight) local time cycle.
     """
     if now is None:
         now_utc = datetime.now(timezone.utc)
         local_tz = zoneinfo.ZoneInfo("America/Denver")
         now = now_utc.astimezone(local_tz)
     
-    effective_time = now - timedelta(hours=12)
-    return effective_time.date().isoformat()
+    return now.date().isoformat()
 
 
 def get_default_state(effective_date: str = None) -> Dict[str, Any]:
