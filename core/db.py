@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, date
 from typing import Dict, Any, List
 from supabase import create_client, Client
+from core.logger import logger
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
