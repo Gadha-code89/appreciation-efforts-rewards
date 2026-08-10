@@ -100,12 +100,29 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
 
     def test_log_book_db(self):
         mock_response = MagicMock()
-        mock_response.data = [{"book_id": "b1", "title": "Charlotte's Web", "status": "In Progress"}]
+        mock_response.data = [{"book_id": "b1", "title": "Charlotte's Web", "status": "In Progress", "logged_date": "2026-08-10"}]
         self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_response
 
         book = db.log_book_db("c_999", "Charlotte's Web", "E.B. White", "In Progress")
         self.assertIsNotNone(book)
         self.assertEqual(book["title"], "Charlotte's Web")
+        self.assertEqual(book["date"], "2026-08-10")
+        self.assertEqual(book["id"], "b1")
+
+    def test_get_reading_logs(self):
+        mock_response = MagicMock()
+        mock_response.data = [
+            {"book_id": "b1", "title": "Charlotte's Web", "status": "In Progress", "logged_date": "2026-08-09"},
+            {"book_id": "b2", "title": "Peter Pan", "status": "Completed", "logged_date": "2026-08-08"}
+        ]
+        self.mock_client.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = mock_response
+
+        books = db.get_reading_logs("c_999")
+        self.assertEqual(len(books), 2)
+        self.assertEqual(books[0]["id"], "b1")
+        self.assertEqual(books[0]["date"], "2026-08-09")
+        self.assertEqual(books[1]["id"], "b2")
+        self.assertEqual(books[1]["date"], "2026-08-08")
 
     def test_get_child_badges(self):
         mock_response = MagicMock()
