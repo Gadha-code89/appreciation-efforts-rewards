@@ -394,7 +394,10 @@ def get_reading_logs(child_id: str) -> List[Dict[str, Any]]:
         return []
     try:
         res = supabase.table("reading_logs").select("*").eq("child_id", child_id).order("logged_date", desc=True).execute()
-        return res.data or []
+        books = res.data or []
+        for b in books:
+            b["id"] = b["book_id"]
+        return books
     except Exception:
         return []
 
@@ -418,7 +421,9 @@ def log_book_db(child_id: str, title: str, author: str, status: str) -> Dict[str
         res = supabase.table("reading_logs").insert(data).execute()
         if res.data:
             log_action_db(child["family_id"], "child", child["name"], "log_book", f"Logged book '{title}' by '{author}' ({status}).")
-            return res.data[0]
+            b = res.data[0]
+            b["id"] = b["book_id"]
+            return b
         return None
     except Exception:
         return None
