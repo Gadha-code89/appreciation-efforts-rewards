@@ -186,18 +186,22 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
         self.assertEqual(attempt_id, "att_3")
         self.mock_client.table.assert_any_call("math_attempts_log")
 
-        # 2. Test complete_math_attempt_db
+        # 2. Test complete_math_attempt_db (perfect score)
         mock_update_res = MagicMock()
-        mock_update_res.data = [{"attempt_id": "att_3"}]
+        mock_update_res.data = [{"attempt_id": "att_3", "status": "completed"}]
         self.mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_update_res
 
         success = db.complete_math_attempt_db("att_3", 10)
         self.assertTrue(success)
 
-        # 3. Test close_active_math_attempts_db
-        self.mock_client.table.return_value.update.return_value.eq.return_value.eq.return_value.execute.return_value = mock_update_res
-        success = db.close_active_math_attempts_db("c_999")
+        # 3. Test complete_math_attempt_db (low score)
+        mock_update_res_low = MagicMock()
+        mock_update_res_low.data = [{"attempt_id": "att_3", "status": "low score"}]
+        self.mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_update_res_low
+
+        success = db.complete_math_attempt_db("att_3", 8)
         self.assertTrue(success)
+
 
 
 if __name__ == "__main__":

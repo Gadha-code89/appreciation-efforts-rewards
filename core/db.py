@@ -658,7 +658,7 @@ def complete_math_attempt_db(attempt_id: str, score: int) -> bool:
         return False
     try:
         data = {
-            "status": "completed",
+            "status": "completed" if score == 10 else "low score",
             "score": score,
             "end_time": datetime.now(timezone.utc).isoformat()
         }
@@ -668,19 +668,4 @@ def complete_math_attempt_db(attempt_id: str, score: int) -> bool:
         logger.error(f"Error in complete_math_attempt_db: {e}")
         return False
 
-
-def close_active_math_attempts_db(child_id: str) -> bool:
-    """Mark all active (started) math attempts for a child as abruptly stopped."""
-    if not is_db_enabled():
-        return False
-    try:
-        data = {
-            "status": "abruptly_stopped",
-            "end_time": datetime.now(timezone.utc).isoformat()
-        }
-        res = supabase.table("math_attempts_log").update(data).eq("child_id", child_id).eq("status", "started").execute()
-        return True
-    except Exception as e:
-        logger.error(f"Error in close_active_math_attempts_db: {e}")
-        return False
 

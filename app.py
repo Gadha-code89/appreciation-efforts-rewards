@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.0.3
+# Hot-reload force touch: v1.0.4
 """
 
 import streamlit as st
@@ -202,9 +202,7 @@ st.markdown("""
 
 
 def switch_profile():
-    if db.is_db_enabled() and st.session_state.get("child_id") and st.session_state.get("active_math_attempt_id"):
-        db.close_active_math_attempts_db(st.session_state.child_id)
-        st.session_state.active_math_attempt_id = None
+    st.session_state.active_math_attempt_id = None
     st.session_state.user_role = None
     st.session_state.child_id = None
     st.session_state.current_math_quiz = None
@@ -356,7 +354,6 @@ elif st.session_state.user_role == "child":
             db.apply_rollover_db(child_id, gap)
             child = db.get_child_by_id(child_id)
             if st.session_state.math_mission_stage != "quiz":
-                db.close_active_math_attempts_db(child_id)
                 st.session_state.active_math_attempt_id = None
             
         streak = child["streak"]
@@ -511,7 +508,6 @@ elif st.session_state.user_role == "child":
                 st.session_state.current_math_quiz = generate_new_quiz(current_level)
                 st.session_state.math_answers = {}
                 if db.is_db_enabled():
-                    db.close_active_math_attempts_db(child_id)
                     st.session_state.active_math_attempt_id = db.start_math_attempt_db(child_id, current_level)
                 st.rerun()
 
