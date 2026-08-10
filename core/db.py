@@ -4,7 +4,8 @@ core/db.py - Supabase Database Driver Client for Multi-Family and Multi-Child Da
 
 import os
 import uuid
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
+import zoneinfo
 from typing import Dict, Any, List
 from supabase import create_client, Client
 from core.logger import logger
@@ -18,6 +19,18 @@ if SUPABASE_URL and SUPABASE_KEY:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     except Exception:
         pass
+
+
+def get_local_operating_date() -> str:
+    """
+    Compute current local operating date in America/Denver timezone
+    based on 9:00 AM operating cycle rollover boundary.
+    """
+    now_utc = datetime.now(timezone.utc)
+    local_tz = zoneinfo.ZoneInfo("America/Denver")
+    local_now = now_utc.astimezone(local_tz)
+    effective_local_time = local_now - timedelta(hours=9)
+    return effective_local_time.date().isoformat()
 
 
 def is_db_enabled() -> bool:
@@ -125,7 +138,7 @@ def register_child(family_id: str, name: str, grade_level: int, start_level: int
             "streak": 0,
             "total_stars": 0,
             "consecutive_rest_days": 0,
-            "last_login_date": date.today().isoformat()
+            "last_login_date": get_local_operating_date()
         }
         res = supabase.table("children").insert(child_data).execute()
         if not res.data:
@@ -607,7 +620,7 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
             "consecutive_rest_days": new_rest_days,
             "tomorrow_reward": "",
             "yesterday_reward_praise": yesterday_praise,
-            "last_login_date": date.today().isoformat()
+            "last_login_date": get_local_operating_date()
         }).eq("child_id", child_id).execute()
 
         # Reset daily missions status back to Not reported

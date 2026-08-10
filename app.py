@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.0.5
+# Hot-reload force touch: v1.0.6
 """
 
 import streamlit as st
@@ -341,14 +341,15 @@ elif st.session_state.user_role == "child":
         
         # Calendar-day rollover check
         last_login_str = child.get("last_login_date")
-        today_str = date.today().isoformat()
+        today_str = db.get_local_operating_date()
         if last_login_str != today_str:
             if not last_login_str:
                 gap = 1
             else:
                 try:
                     last_login_date = datetime.strptime(last_login_str, "%Y-%m-%d").date()
-                    gap = (date.today() - last_login_date).days
+                    today_date = datetime.strptime(today_str, "%Y-%m-%d").date()
+                    gap = (today_date - last_login_date).days
                 except Exception:
                     gap = 1
             db.apply_rollover_db(child_id, gap)

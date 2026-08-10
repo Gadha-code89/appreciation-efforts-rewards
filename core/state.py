@@ -5,7 +5,8 @@ core/state.py - Shared Device State Manager with 9:00 AM Local Time Rollover & A
 import json
 import os
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import zoneinfo
 from pathlib import Path
 from typing import Dict, Any
 
@@ -23,7 +24,9 @@ def compute_effective_operating_date(now: datetime = None) -> str:
     Times before 9:00 AM count as part of previous calendar day's operating cycle.
     """
     if now is None:
-        now = datetime.now()
+        now_utc = datetime.now(timezone.utc)
+        local_tz = zoneinfo.ZoneInfo("America/Denver")
+        now = now_utc.astimezone(local_tz)
     
     effective_time = now - timedelta(hours=9)
     return effective_time.date().isoformat()
