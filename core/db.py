@@ -38,7 +38,8 @@ def log_action_db(family_id: str, actor_type: str, actor_name: str, action: str,
         }
         res = supabase.table("audit_logs").insert(data).execute()
         return bool(res.data)
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error in log_action_db: {e}")
         return False
 
 
@@ -56,7 +57,8 @@ def login_family(username: str, password_plain: str) -> Dict[str, Any]:
                 log_action_db(family["family_id"], "parent", "Parent", "login", f"Family '{username}' logged in.")
                 return family
         return None
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error in login_family: {e}")
         return None
 
 
@@ -76,7 +78,8 @@ def register_family(username: str, password_plain: str, parent_pin: str) -> Dict
             log_action_db(family["family_id"], "parent", "Parent", "register", f"Family '{username}' registered successfully.")
             return family
         return None
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error in register_family: {e}")
         return None
 
 
