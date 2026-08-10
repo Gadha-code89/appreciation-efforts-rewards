@@ -554,6 +554,31 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
                 "stars_earned": stars_today
             }).execute()
 
+        # 1b. Archive detailed daily missions to mission_history table
+        for m in missions:
+            m_title = m.get("title", "")
+            if "Math Mission" in m_title or "math_mission" in m_title:
+                comp_source = "math_auto_complete"
+            elif "Read" in m_title or "reading" in m_title:
+                comp_source = "reading_auto_trigger"
+            else:
+                comp_source = "child"
+
+            history_payload = {
+                "mission_id": m["mission_id"],
+                "child_id": child_id,
+                "date": effective_date_str,
+                "title": m["title"],
+                "category": m["category"],
+                "why": m.get("why"),
+                "status": m["status"],
+                "math_attempts": m.get("math_attempts") or [],
+                "stars_earned": 1 if m["status"] == "Completed" else 0,
+                "parent_confirmed": m["status"] == "Completed",
+                "completion_source": comp_source
+            }
+            supabase.table("mission_history").insert(history_payload).execute()
+
         # 2. Update Streak & Rest Days
         new_streak = child.get("streak", 0)
         new_rest_days = child.get("consecutive_rest_days", 0)

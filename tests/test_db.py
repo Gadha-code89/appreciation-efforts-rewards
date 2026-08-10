@@ -142,6 +142,36 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
         success = db.log_action_db("fam_123", "child", "Alice", "test_action", "details")
         self.assertTrue(success)
         self.mock_client.table.assert_called_with("audit_logs")
+    def test_apply_rollover_db_saves_mission_history(self):
+        mock_child_response = MagicMock()
+        mock_child_response.data = [{"child_id": "c_999", "name": "Alice", "streak": 2, "consecutive_rest_days": 0, "last_login_date": "2026-08-09", "family_id": "fam_123"}]
+
+        mock_missions_response = MagicMock()
+        mock_missions_response.data = [
+            {"mission_id": "m1", "title": "🗺️ Complete Math Mission", "category": "learning", "status": "Completed", "math_attempts": [10]},
+            {"mission_id": "m2", "title": "🧹 Tidy your room", "category": "helpful", "status": "Not reported"}
+        ]
+
+        # Mock select calls: get_child_by_id, get_daily_missions, get_child_by_id in log_action_db
+        self.mock_client.table.return_value.select.return_value.eq.return_value.execute.side_effect = [
+            mock_child_response,
+            mock_missions_response,
+            mock_child_response
+        ]
+
+        mock_insert_response = MagicMock()
+        mock_insert_response.data = [{"id": "some_id"}]
+        self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_insert_response
+
+        mock_update_response = MagicMock()
+        mock_update_response.data = [{"id": "updated"}]
+        self.mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_update_response
+
+        success = db.apply_rollover_db("c_999", 1)
+        self.assertTrue(success)
+
+        # Verify mission_history was triggered
+        self.mock_client.table.assert_any_call("mission_history")
 
 
 if __name__ == "__main__":
