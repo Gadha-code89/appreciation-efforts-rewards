@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.0.2
+# Hot-reload force touch: v1.0.3
 """
 
 import streamlit as st
@@ -67,6 +67,10 @@ if "last_math_score" not in st.session_state:
 
 if "last_math_attempts" not in st.session_state:
     st.session_state.last_math_attempts = []
+
+if "active_math_attempt_id" not in st.session_state:
+    st.session_state.active_math_attempt_id = None
+
 
 
 # Styling (Typo.love & Nudot aesthetics)
@@ -198,6 +202,9 @@ st.markdown("""
 
 
 def switch_profile():
+    if db.is_db_enabled() and st.session_state.get("child_id") and st.session_state.get("active_math_attempt_id"):
+        db.close_active_math_attempts_db(st.session_state.child_id)
+        st.session_state.active_math_attempt_id = None
     st.session_state.user_role = None
     st.session_state.child_id = None
     st.session_state.current_math_quiz = None
@@ -348,6 +355,9 @@ elif st.session_state.user_role == "child":
                     gap = 1
             db.apply_rollover_db(child_id, gap)
             child = db.get_child_by_id(child_id)
+            if st.session_state.math_mission_stage != "quiz":
+                db.close_active_math_attempts_db(child_id)
+                st.session_state.active_math_attempt_id = None
             
         streak = child["streak"]
         total_stars = child["total_stars"]
@@ -500,6 +510,9 @@ elif st.session_state.user_role == "child":
                 st.session_state.math_mission_stage = "quiz"
                 st.session_state.current_math_quiz = generate_new_quiz(current_level)
                 st.session_state.math_answers = {}
+                if db.is_db_enabled():
+                    db.close_active_math_attempts_db(child_id)
+                    st.session_state.active_math_attempt_id = db.start_math_attempt_db(child_id, current_level)
                 st.rerun()
 
         elif st.session_state.math_mission_stage == "quiz":
@@ -549,6 +562,10 @@ elif st.session_state.user_role == "child":
                         added_stars = 2 if score == 10 else 1
                         
                         if db.is_db_enabled():
+                            if st.session_state.get("active_math_attempt_id"):
+                                db.complete_math_attempt_db(st.session_state.active_math_attempt_id, score)
+                                st.session_state.active_math_attempt_id = None
+                            
                             # Auto-complete math mission task on checklist
                             db.complete_mission_db(math_mission["mission_id"], st.session_state.last_math_attempts)
                             db.confirm_mission_db(math_mission["mission_id"], f"Earned {added_stars} stars instantly! 🚀", child_id)

@@ -172,6 +172,32 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
 
         # Verify mission_history was triggered
         self.mock_client.table.assert_any_call("mission_history")
+    def test_math_attempts_logging(self):
+        # 1. Test start_math_attempt_db
+        mock_select_res = MagicMock()
+        mock_select_res.data = [{"attempt_id": "att_1"}, {"attempt_id": "att_2"}]
+        mock_insert_res = MagicMock()
+        mock_insert_res.data = [{"attempt_id": "att_3"}]
+
+        self.mock_client.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = mock_select_res
+        self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_insert_res
+
+        attempt_id = db.start_math_attempt_db("c_999", 2)
+        self.assertEqual(attempt_id, "att_3")
+        self.mock_client.table.assert_any_call("math_attempts_log")
+
+        # 2. Test complete_math_attempt_db
+        mock_update_res = MagicMock()
+        mock_update_res.data = [{"attempt_id": "att_3"}]
+        self.mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_update_res
+
+        success = db.complete_math_attempt_db("att_3", 10)
+        self.assertTrue(success)
+
+        # 3. Test close_active_math_attempts_db
+        self.mock_client.table.return_value.update.return_value.eq.return_value.eq.return_value.execute.return_value = mock_update_res
+        success = db.close_active_math_attempts_db("c_999")
+        self.assertTrue(success)
 
 
 if __name__ == "__main__":

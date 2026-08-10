@@ -4,7 +4,7 @@ core/db.py - Supabase Database Driver Client for Multi-Family and Multi-Child Da
 
 import os
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Dict, Any, List
 from supabase import create_client, Client
 from core.logger import logger
@@ -623,3 +623,64 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
         return True
     except Exception:
         return False
+
+
+# ==================== MATH ATTEMPTS LOGGING ====================
+
+def start_math_attempt_db(child_id: str, level: int) -> str:
+    """Initialize a math attempt log record and return the UUID."""
+    if not is_db_enabled():
+        return ""
+    try:
+        # Calculate attempt number in python for safety
+        res_attempts = supabase.table("math_attempts_log").select("attempt_id").eq("child_id", child_id).eq("level", level).execute()
+        attempt_num = len(res_attempts.data or []) + 1
+
+        data = {
+            "child_id": child_id,
+            "level": level,
+            "attempt_number": attempt_num,
+            "status": "started",
+            "start_time": datetime.now(timezone.utc).isoformat()
+        }
+        res_insert = supabase.table("math_attempts_log").insert(data).execute()
+        if res_insert.data:
+            return res_insert.data[0]["attempt_id"]
+        return ""
+    except Exception as e:
+        logger.error(f"Error in start_math_attempt_db: {e}")
+        return ""
+
+
+def complete_math_attempt_db(attempt_id: str, score: int) -> bool:
+    """Mark a math attempt as completed with score and end time."""
+    if not is_db_enabled() or not attempt_id:
+        return False
+    try:
+        data = {
+            "status": "completed",
+            "score": score,
+            "end_time": datetime.now(timezone.utc).isoformat()
+        }
+        res = supabase.table("math_attempts_log").update(data).eq("attempt_id", attempt_id).execute()
+        return bool(res.data)
+    except Exception as e:
+        logger.error(f"Error in complete_math_attempt_db: {e}")
+        return False
+
+
+def close_active_math_attempts_db(child_id: str) -> bool:
+    """Mark all active (started) math attempts for a child as abruptly stopped."""
+    if not is_db_enabled():
+        return False
+    try:
+        data = {
+            "status": "abruptly_stopped",
+            "end_time": datetime.now(timezone.utc).isoformat()
+        }
+        res = supabase.table("math_attempts_log").update(data).eq("child_id", child_id).eq("status", "started").execute()
+        return True
+    except Exception as e:
+        logger.error(f"Error in close_active_math_attempts_db: {e}")
+        return False
+
