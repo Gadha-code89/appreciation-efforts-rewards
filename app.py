@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.1.3
+# Hot-reload force touch: v1.1.4
 """
 
 import streamlit as st
@@ -30,6 +30,7 @@ importlib.reload(core.badges)
 importlib.reload(core.levels)
 importlib.reload(db)
 
+from core.logger import logger
 from core.state import load_state, save_state, check_and_apply_9am_rollover
 from core.scoring import generate_new_quiz, grade_quiz
 from core.reward import complete_mission, confirm_mission
