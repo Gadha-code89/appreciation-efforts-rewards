@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.0.9
+# Hot-reload force touch: v1.1.0
 """
 
 import streamlit as st
@@ -364,6 +364,7 @@ elif st.session_state.user_role == "child":
         yesterday_reward = child.get("yesterday_reward_praise", "")
         tomorrow_reward = child.get("tomorrow_reward", "")
         
+        db.evaluate_badges_db(child_id)
         badges = db.get_child_badges(child_id)
         missions = db.get_daily_missions(child_id)
         # In-place sort: Math first, Reading last
@@ -578,7 +579,7 @@ elif st.session_state.user_role == "child":
                                     # Level up!
                                     db.update_child_settings(child_id, child["grade_level"], current_level + 1)
                                     db.save_child_stats(child_id, new_total_stars, streak, 1)
-                                    db.unlock_badge_db(child_id, "growing_star")
+                                    db.evaluate_badges_db(child_id)
                                     st.session_state.math_mission_stage = "level_up"
                                 else:
                                     db.save_child_stats(child_id, new_total_stars, streak, new_test_idx)

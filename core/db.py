@@ -717,3 +717,64 @@ def complete_math_attempt_db(attempt_id: str, score: int) -> bool:
         return False
 
 
+# ==================== BADGE EVALUATION ====================
+
+def evaluate_badges_db(child_id: str) -> List[str]:
+    """
+    Scan child's database stats, streak, history, and books to unlock new badges.
+    Returns the list of newly unlocked badge IDs.
+    """
+    if not is_db_enabled():
+        return []
+    try:
+        child = get_child_by_id(child_id)
+        if not child:
+            return []
+
+        # Get currently unlocked badges
+        unlocked = set(get_child_badges(child_id))
+        new_unlocks = []
+
+        # 1. First Step: at least 1 entry in journey_history
+        journey = get_journey_history(child_id)
+        if len(journey) >= 1 and "first_step" not in unlocked:
+            new_unlocks.append("first_step")
+
+        # 2. On Fire: 3-day streak
+        streak = child.get("streak", 0)
+        if streak >= 3 and "on_fire" not in unlocked:
+            new_unlocks.append("on_fire")
+
+        # 3. Brain Builder & Helpful Hero (10 learning/helpful missions in journey_history)
+        total_learning = 0
+        total_helpful = 0
+        for j in journey:
+            completed_missions = j.get("completed_missions") or []
+            for title in completed_missions:
+                t_lower = title.lower()
+                if any(keyword in t_lower for keyword in ["math", "quiz", "homework", "read", "learning", "✏️", "📚", "🗺️"]):
+                    total_learning += 1
+                if any(keyword in t_lower for keyword in ["tidy", "room", "help", "clean", "🧹", "❤️"]):
+                    total_helpful += 1
+
+        if total_learning >= 10 and "brain_builder" not in unlocked:
+            new_unlocks.append("brain_builder")
+        if total_helpful >= 10 and "helpful_hero" not in unlocked:
+            new_unlocks.append("helpful_hero")
+
+        # 4. Growing Star: 50 total stars
+        total_stars = child.get("total_stars", 0)
+        if total_stars >= 50 and "growing_star" not in unlocked:
+            new_unlocks.append("growing_star")
+
+        # Unlock all new badges in DB
+        for badge_id in new_unlocks:
+            unlock_badge_db(child_id, badge_id)
+
+        return new_unlocks
+    except Exception as e:
+        logger.error(f"Error in evaluate_badges_db: {e}")
+        return []
+
+
+
