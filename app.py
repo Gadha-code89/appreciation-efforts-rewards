@@ -906,7 +906,7 @@ elif st.session_state.user_role == "parent":
             if not pending_books:
                 st.info("No completed books pending approval right now.")
             else:
-                for book in pending_books:
+                for idx, book in enumerate(pending_books):
                     author_text = f" by {book['author']}" if book.get('author') else ""
                     st.markdown(f"""
                     <div class="card" style="border-left: 6px solid #8B5CF6; padding: 15px !important;">
