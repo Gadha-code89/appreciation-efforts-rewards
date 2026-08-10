@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.0.4
+# Hot-reload force touch: v1.0.5
 """
 
 import streamlit as st
@@ -614,6 +614,8 @@ elif st.session_state.user_role == "child":
             with col_try:
                 if st.button("Try Again 💪", key="retry_quiz_btn", type="primary", use_container_width=True):
                     st.session_state.math_mission_stage = "quiz"
+                    if db.is_db_enabled():
+                        st.session_state.active_math_attempt_id = db.start_math_attempt_db(child_id, current_level)
                     st.rerun()
             with col_done:
                 if st.button("Accept & Exit 🏠", key=f"done_quiz_partial_btn", use_container_width=True):
