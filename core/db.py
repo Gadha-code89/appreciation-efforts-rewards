@@ -24,12 +24,12 @@ if SUPABASE_URL and SUPABASE_KEY:
 def get_local_operating_date() -> str:
     """
     Compute current local operating date in America/Denver timezone
-    based on 9:00 AM operating cycle rollover boundary.
+    based on 12:00 PM (noon) operating cycle rollover boundary.
     """
     now_utc = datetime.now(timezone.utc)
     local_tz = zoneinfo.ZoneInfo("America/Denver")
     local_now = now_utc.astimezone(local_tz)
-    effective_local_time = local_now - timedelta(hours=9)
+    effective_local_time = local_now - timedelta(hours=12)
     return effective_local_time.date().isoformat()
 
 

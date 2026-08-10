@@ -9,15 +9,15 @@ from core.state import compute_effective_operating_date, check_and_apply_9am_rol
 
 class TestState(unittest.TestCase):
 
-    def test_effective_operating_date_before_9am(self):
-        # 8:59 AM on 2026-08-06 should count as the operating day of 2026-08-05
-        dt = datetime(2026, 8, 6, 8, 59, 59)
+    def test_effective_operating_date_before_12pm(self):
+        # 11:59 AM on 2026-08-06 should count as the operating day of 2026-08-05
+        dt = datetime(2026, 8, 6, 11, 59, 59)
         eff_date = compute_effective_operating_date(dt)
         self.assertEqual(eff_date, "2026-08-05")
 
-    def test_effective_operating_date_after_9am(self):
-        # 9:01 AM on 2026-08-06 should count as the operating day of 2026-08-06
-        dt = datetime(2026, 8, 6, 9, 0, 1)
+    def test_effective_operating_date_after_12pm(self):
+        # 12:01 PM on 2026-08-06 should count as the operating day of 2026-08-06
+        dt = datetime(2026, 8, 6, 12, 0, 1)
         eff_date = compute_effective_operating_date(dt)
         self.assertEqual(eff_date, "2026-08-06")
 
