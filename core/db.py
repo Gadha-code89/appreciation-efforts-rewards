@@ -24,6 +24,24 @@ def is_db_enabled() -> bool:
     return supabase is not None
 
 
+def log_action_db(family_id: str, actor_type: str, actor_name: str, action: str, details: str) -> bool:
+    """Insert an audit log record into the database."""
+    if not is_db_enabled():
+        return False
+    try:
+        data = {
+            "family_id": family_id,
+            "actor_type": actor_type,
+            "actor_name": actor_name,
+            "action": action,
+            "details": details
+        }
+        res = supabase.table("audit_logs").insert(data).execute()
+        return bool(res.data)
+    except Exception:
+        return False
+
+
 # ==================== FAMILY OPERATIONS ====================
 
 def login_family(username: str, password_plain: str) -> Dict[str, Any]:
@@ -34,8 +52,8 @@ def login_family(username: str, password_plain: str) -> Dict[str, Any]:
         res = supabase.table("families").select("*").eq("username", username.strip().lower()).execute()
         if res.data:
             family = res.data[0]
-            # Simple password check
             if family["password_hash"] == password_plain.strip():
+                log_action_db(family["family_id"], "parent", "Parent", "login", f"Family '{username}' logged in.")
                 return family
         return None
     except Exception:
@@ -54,7 +72,9 @@ def register_family(username: str, password_plain: str, parent_pin: str) -> Dict
         }
         res = supabase.table("families").insert(data).execute()
         if res.data:
-            return res.data[0]
+            family = res.data[0]
+            log_action_db(family["family_id"], "parent", "Parent", "register", f"Family '{username}' registered successfully.")
+            return family
         return None
     except Exception:
         return None
@@ -66,7 +86,10 @@ def update_parent_pin(family_id: str, new_pin: str) -> bool:
         return False
     try:
         res = supabase.table("families").update({"parent_pin": new_pin.strip()}).eq("family_id", family_id).execute()
-        return bool(res.data)
+        if res.data:
+            log_action_db(family_id, "parent", "Parent", "update_pin", "Updated parent configuration settings PIN.")
+            return True
+        return False
     except Exception:
         return False
 
@@ -146,6 +169,7 @@ def register_child(family_id: str, name: str, grade_level: int, start_level: int
             }
         ]
         supabase.table("daily_missions").insert(default_missions).execute()
+        log_action_db(family_id, "parent", "Parent", "register_child", f"Registered child profile '{name}' (Grade {grade_level}, Math Level {start_level}).")
         return child
     except Exception:
         return None
@@ -169,12 +193,19 @@ def update_child_settings(child_id: str, grade_level: int, math_level: int) -> b
     if not is_db_enabled():
         return False
     try:
+        child = get_child_by_id(child_id)
+        if not child:
+            return False
+
         data = {
             "grade_level": int(grade_level),
             "current_level": int(math_level)
         }
         res = supabase.table("children").update(data).eq("child_id", child_id).execute()
-        return bool(res.data)
+        if res.data:
+            log_action_db(child["family_id"], "parent", "Parent", "update_settings", f"Updated child '{child['name']}' settings (Grade {grade_level}, Math Level {math_level}).")
+            return True
+        return False
     except Exception:
         return False
 
@@ -184,6 +215,10 @@ def save_child_stats(child_id: str, stars: int, streak: int, test_in_level: int 
     if not is_db_enabled():
         return False
     try:
+        child = get_child_by_id(child_id)
+        if not child:
+            return False
+
         data = {
             "total_stars": int(stars),
             "streak": int(streak)
@@ -191,7 +226,10 @@ def save_child_stats(child_id: str, stars: int, streak: int, test_in_level: int 
         if test_in_level is not None:
             data["current_test_in_level"] = int(test_in_level)
         res = supabase.table("children").update(data).eq("child_id", child_id).execute()
-        return bool(res.data)
+        if res.data:
+            log_action_db(child["family_id"], "parent", "Parent", "override_stats", f"Overrode stars and streak values for child '{child['name']}' (Stars: {stars}, Streak: {streak}).")
+            return True
+        return False
     except Exception:
         return False
 
@@ -214,6 +252,10 @@ def add_daily_mission(child_id: str, title: str, why: str, category: str) -> Dic
     if not is_db_enabled():
         return None
     try:
+        child = get_child_by_id(child_id)
+        if not child:
+            return None
+
         data = {
             "child_id": child_id,
             "title": title.strip(),
@@ -223,6 +265,7 @@ def add_daily_mission(child_id: str, title: str, why: str, category: str) -> Dic
         }
         res = supabase.table("daily_missions").insert(data).execute()
         if res.data:
+            log_action_db(child["family_id"], "parent", "Parent", "add_mission", f"Added daily checklist task '{title}' for child '{child['name']}'.")
             return res.data[0]
         return None
     except Exception:
@@ -234,8 +277,19 @@ def delete_daily_mission(mission_id: str) -> bool:
     if not is_db_enabled():
         return False
     try:
+        res_m = supabase.table("daily_missions").select("child_id, title").eq("mission_id", mission_id).execute()
+        if not res_m.data:
+            return False
+            
+        child_id = res_m.data[0]["child_id"]
+        title = res_m.data[0]["title"]
+        child = get_child_by_id(child_id)
+
         res = supabase.table("daily_missions").delete().eq("mission_id", mission_id).execute()
-        return bool(res.data)
+        if res.data and child:
+            log_action_db(child["family_id"], "parent", "Parent", "delete_mission", f"Deleted daily checklist task '{title}' for child '{child['name']}'.")
+            return True
+        return False
     except Exception:
         return False
 
@@ -245,11 +299,23 @@ def complete_mission_db(mission_id: str, math_attempts: List[int] = None) -> boo
     if not is_db_enabled():
         return False
     try:
+        res_m = supabase.table("daily_missions").select("child_id, title").eq("mission_id", mission_id).execute()
+        if not res_m.data:
+            return False
+
+        child_id = res_m.data[0]["child_id"]
+        title = res_m.data[0]["title"]
+        child = get_child_by_id(child_id)
+
         data = {"status": "Pending Confirmation"}
         if math_attempts is not None:
             data["math_attempts"] = math_attempts
+            
         res = supabase.table("daily_missions").update(data).eq("mission_id", mission_id).execute()
-        return bool(res.data)
+        if res.data and child:
+            log_action_db(child["family_id"], "child", child["name"], "complete_mission", f"Completed daily mission '{title}' (Pending confirmation).")
+            return True
+        return False
     except Exception:
         return False
 
@@ -259,20 +325,22 @@ def confirm_mission_db(mission_id: str, praise: str, child_id: str) -> bool:
     if not is_db_enabled():
         return False
     try:
-        # Update mission status to Completed
-        res_m = supabase.table("daily_missions").update({
+        res_m = supabase.table("daily_missions").select("title").eq("mission_id", mission_id).execute()
+        title = res_m.data[0]["title"] if res_m.data else "Task"
+
+        res_m_up = supabase.table("daily_missions").update({
             "status": "Completed",
             "praise": praise.strip()
         }).eq("mission_id", mission_id).execute()
         
-        if not res_m.data:
+        if not res_m_up.data:
             return False
 
-        # Fetch and increment total_stars
         child = get_child_by_id(child_id)
         if child:
             new_stars = child.get("total_stars", 0) + 1
             supabase.table("children").update({"total_stars": new_stars}).eq("child_id", child_id).execute()
+            log_action_db(child["family_id"], "parent", "Parent", "confirm_mission", f"Confirmed daily mission '{title}' for child '{child['name']}' (praise: '{praise}'). Awarded +1 Star.")
         return True
     except Exception:
         return False
@@ -283,11 +351,22 @@ def reset_mission_status_db(mission_id: str) -> bool:
     if not is_db_enabled():
         return False
     try:
+        res_m = supabase.table("daily_missions").select("child_id, title").eq("mission_id", mission_id).execute()
+        if not res_m.data:
+            return False
+
+        child_id = res_m.data[0]["child_id"]
+        title = res_m.data[0]["title"]
+        child = get_child_by_id(child_id)
+
         res = supabase.table("daily_missions").update({
             "status": "Not reported",
             "praise": ""
         }).eq("mission_id", mission_id).execute()
-        return bool(res.data)
+        if res.data and child:
+            log_action_db(child["family_id"], "parent", "Parent", "reject_mission", f"Flagged daily mission '{title}' as needs more work for child '{child['name']}'.")
+            return True
+        return False
     except Exception:
         return False
 
@@ -310,6 +389,10 @@ def log_book_db(child_id: str, title: str, author: str, status: str) -> Dict[str
     if not is_db_enabled():
         return None
     try:
+        child = get_child_by_id(child_id)
+        if not child:
+            return None
+
         data = {
             "child_id": child_id,
             "title": title.strip(),
@@ -319,6 +402,7 @@ def log_book_db(child_id: str, title: str, author: str, status: str) -> Dict[str
         }
         res = supabase.table("reading_logs").insert(data).execute()
         if res.data:
+            log_action_db(child["family_id"], "child", child["name"], "log_book", f"Logged book '{title}' by '{author}' ({status}).")
             return res.data[0]
         return None
     except Exception:
@@ -330,20 +414,23 @@ def update_book_status_db(book_id: str, status: str, praise: str, child_id: str)
     if not is_db_enabled():
         return False
     try:
-        res_b = supabase.table("reading_logs").update({
+        res_b = supabase.table("reading_logs").select("title").eq("book_id", book_id).execute()
+        title = res_b.data[0]["title"] if res_b.data else "Book"
+
+        res_b_up = supabase.table("reading_logs").update({
             "status": status,
             "praise": praise.strip()
         }).eq("book_id", book_id).execute()
 
-        if not res_b.data:
+        if not res_b_up.data:
             return False
 
-        # Award an extra star if marked Completed by parent
-        if status == "Completed":
-            child = get_child_by_id(child_id)
-            if child:
+        child = get_child_by_id(child_id)
+        if child:
+            if status == "Completed":
                 new_stars = child.get("total_stars", 0) + 1
                 supabase.table("children").update({"total_stars": new_stars}).eq("child_id", child_id).execute()
+            log_action_db(child["family_id"], "parent" if status == "Completed" else "child", "Parent" if status == "Completed" else child["name"], "update_book", f"Updated book '{title}' status to '{status}'. Praise: '{praise}'.")
         return True
     except Exception:
         return False
@@ -356,8 +443,15 @@ def save_rewards_config(child_id: str, tomorrow_reward: str) -> bool:
     if not is_db_enabled():
         return False
     try:
+        child = get_child_by_id(child_id)
+        if not child:
+            return False
+
         res = supabase.table("children").update({"tomorrow_reward": tomorrow_reward.strip()}).eq("child_id", child_id).execute()
-        return bool(res.data)
+        if res.data:
+            log_action_db(child["family_id"], "parent", "Parent", "save_reward", f"Configured tomorrow's reward for child '{child['name']}': '{tomorrow_reward}'.")
+            return True
+        return False
     except Exception:
         return False
 
@@ -393,11 +487,18 @@ def unlock_badge_db(child_id: str, badge_catalog_id: str) -> bool:
     if not is_db_enabled():
         return False
     try:
+        child = get_child_by_id(child_id)
+        if not child:
+            return False
+
         res = supabase.table("child_badges").insert({
             "child_id": child_id,
             "badge_catalog_id": badge_catalog_id
         }).execute()
-        return bool(res.data)
+        if res.data:
+            log_action_db(child["family_id"], "child", child["name"], "unlock_badge", f"Unlocked badge '{badge_catalog_id}'!")
+            return True
+        return False
     except Exception:
         return False
 
@@ -405,7 +506,7 @@ def unlock_badge_db(child_id: str, badge_catalog_id: str) -> bool:
 # ==================== ROLLOVER & STREAK CYCLE ====================
 
 def apply_rollover_db(child_id: str, gap_days: int) -> bool:
-    """Apply the daily 9:00 AM operating rollover to the child DB state."""
+    """Apply the daily operating rollover to the child DB state."""
     if not is_db_enabled():
         return False
     try:
@@ -469,6 +570,8 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
                 "math_attempts": []
             }).eq("mission_id", m["mission_id"]).execute()
 
+        # Log rollover action
+        log_action_db(child["family_id"], "system", "Rollover System", "rollover", f"Completed daily rollover cycle for child '{child['name']}'. Streak: {new_streak}, Stars Today: {stars_today}.")
         return True
     except Exception:
         return False

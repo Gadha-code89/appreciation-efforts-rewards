@@ -34,7 +34,7 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
         family = db.login_family("smiths", "pass")
         self.assertIsNotNone(family)
         self.assertEqual(family["family_id"], "fam_123")
-        self.mock_client.table.assert_called_with("families")
+        self.mock_client.table.assert_any_call("families")
 
     def test_login_family_invalid_password(self):
         mock_response = MagicMock()
@@ -52,7 +52,7 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
         family = db.register_family("jones", "pass123", "9999")
         self.assertIsNotNone(family)
         self.assertEqual(family["family_id"], "fam_456")
-        self.mock_client.table.assert_called_with("families")
+        self.mock_client.table.assert_any_call("families")
 
     def test_update_parent_pin(self):
         mock_response = MagicMock()
@@ -116,6 +116,15 @@ class TestSupabaseDatabaseDriver(unittest.TestCase):
         self.assertEqual(len(badges), 2)
         self.assertIn("first_step", badges)
         self.assertIn("on_fire", badges)
+
+    def test_log_action_db(self):
+        mock_response = MagicMock()
+        mock_response.data = [{"log_id": "log_777"}]
+        self.mock_client.table.return_value.insert.return_value.execute.return_value = mock_response
+
+        success = db.log_action_db("fam_123", "child", "Alice", "test_action", "details")
+        self.assertTrue(success)
+        self.mock_client.table.assert_called_with("audit_logs")
 
 
 if __name__ == "__main__":
