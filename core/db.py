@@ -573,13 +573,44 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
 
         missions = get_daily_missions(child_id)
         completed_today = [m["title"] for m in missions if m.get("status") == "Completed"]
-        stars_today = len(completed_today)
 
-        # 1. Update Journey Log (defensive write inside isolated try-except)
         effective_date_str = child.get("last_login_date")
         if not effective_date_str:
             effective_date_str = get_local_operating_date()
 
+        # Calculate stars earned dynamically:
+        # 1. Standard checklist missions completed (1 star each, excluding Math)
+        standard_stars = sum(1 for m in missions if m.get("status") == "Completed" and m.get("id") != "math_mission")
+
+        # 2. Math quizzes completed on this operating day
+        math_stars = 0
+        try:
+            res_math = supabase.table("math_attempts_log").select("score").eq("child_id", child_id).like("end_time", f"{effective_date_str}%").execute()
+            for attempt in (res_math.data or []):
+                score = attempt.get("score")
+                if score is not None:
+                    if score == 10:
+                        math_stars += 5
+                    elif score >= 8:
+                        math_stars += 3
+                    elif score >= 5:
+                        math_stars += 2
+                    else:
+                        math_stars += 1
+        except Exception as e:
+            logger.error(f"Error calculating math stars in rollover: {e}")
+
+        # 3. Books approved on this operating day
+        book_stars = 0
+        try:
+            res_books = supabase.table("reading_logs").select("book_id").eq("child_id", child_id).eq("status", "Completed").eq("logged_date", effective_date_str).execute()
+            book_stars = len(res_books.data or [])
+        except Exception as e:
+            logger.error(f"Error calculating book stars in rollover: {e}")
+
+        stars_today = standard_stars + math_stars + book_stars
+
+        # 1. Update Journey Log (defensive write inside isolated try-except)
         try:
             # Check if journey log already exists for this child and date to prevent duplicate inserts
             res_check = supabase.table("journey_history").select("journey_id").eq("child_id", child_id).eq("date", effective_date_str).execute()
@@ -601,10 +632,13 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
                     m_title = m.get("title", "")
                     if "Math Mission" in m_title or "math_mission" in m_title:
                         comp_source = "math_auto_complete"
+                        m_stars = math_stars
                     elif "Read" in m_title or "reading" in m_title:
                         comp_source = "reading_auto_trigger"
+                        m_stars = 1 if m["status"] == "Completed" else 0
                     else:
                         comp_source = "child"
+                        m_stars = 1 if m["status"] == "Completed" else 0
 
                     history_payload = {
                         "mission_id": m["mission_id"],
@@ -615,7 +649,7 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
                         "why": m.get("why"),
                         "status": m["status"],
                         "math_attempts": m.get("math_attempts") or [],
-                        "stars_earned": 1 if m["status"] == "Completed" else 0,
+                        "stars_earned": m_stars,
                         "parent_confirmed": m["status"] == "Completed",
                         "completion_source": comp_source
                     }
