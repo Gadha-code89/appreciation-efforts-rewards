@@ -246,7 +246,16 @@ def get_daily_missions(child_id: str) -> List[Dict[str, Any]]:
         return []
     try:
         res = supabase.table("daily_missions").select("*").eq("child_id", child_id).execute()
-        return res.data or []
+        missions = res.data or []
+        for m in missions:
+            m_title = m.get("title", "")
+            if "Math Mission" in m_title or "math_mission" in m_title:
+                m["id"] = "math_mission"
+            elif "Read" in m_title or "reading" in m_title:
+                m["id"] = "reading"
+            else:
+                m["id"] = m["mission_id"]
+        return missions
     except Exception:
         return []
 
@@ -270,7 +279,9 @@ def add_daily_mission(child_id: str, title: str, why: str, category: str) -> Dic
         res = supabase.table("daily_missions").insert(data).execute()
         if res.data:
             log_action_db(child["family_id"], "parent", "Parent", "add_mission", f"Added daily checklist task '{title}' for child '{child['name']}'.")
-            return res.data[0]
+            m = res.data[0]
+            m["id"] = m["mission_id"]
+            return m
         return None
     except Exception:
         return None
