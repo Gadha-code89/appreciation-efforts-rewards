@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.1.2
+# Hot-reload force touch: v1.1.3
 """
 
 import streamlit as st
@@ -351,6 +351,7 @@ elif st.session_state.user_role == "child":
     if db.is_db_enabled():
         child_id = st.session_state.child_id
         child = db.get_child_by_id(child_id)
+        logger.info(f"DEBUG: Child keys: {list(child.keys()) if child else 'None'}")
         
         # Calendar-day rollover check
         last_login_str = child.get("last_login_date")
