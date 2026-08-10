@@ -301,7 +301,8 @@ def add_daily_mission(child_id: str, title: str, why: str, category: str) -> Dic
             m["id"] = m["mission_id"]
             return m
         return None
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error in add_daily_mission: {e}")
         return None
 
 
@@ -323,7 +324,8 @@ def delete_daily_mission(mission_id: str) -> bool:
             log_action_db(child["family_id"], "parent", "Parent", "delete_mission", f"Deleted daily checklist task '{title}' for child '{child['name']}'.")
             return True
         return False
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error in delete_daily_mission: {e}")
         return False
 
 
@@ -501,7 +503,8 @@ def save_rewards_config(child_id: str, tomorrow_reward: str) -> bool:
             log_action_db(child["family_id"], "parent", "Parent", "save_reward", f"Configured tomorrow's reward for child '{child['name']}': '{tomorrow_reward}'.")
             return True
         return False
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error in save_rewards_config: {e}")
         return False
 
 

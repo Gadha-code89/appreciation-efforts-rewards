@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.1.4
+# Hot-reload force touch: v1.1.5
 """
 
 import streamlit as st
@@ -989,11 +989,14 @@ elif st.session_state.user_role == "parent":
         reward_val = st.text_input("Tomorrow's Reward:", value=tomorrow_reward_val)
         if st.button("Save Tomorrow's Reward 🎁", type="primary"):
             if db.is_db_enabled():
-                db.save_rewards_config(active_child_id, reward_val)
+                if db.save_rewards_config(active_child_id, reward_val):
+                    st.success("Reward configuration saved!")
+                else:
+                    st.error("Failed to save reward to database. Make sure you ran the SQL script to add reward columns to your children table!")
             else:
                 state["tomorrow_reward"] = reward_val
                 save_state(state)
-            st.success("Reward configuration saved!")
+                st.success("Reward configuration saved!")
 
         if not db.is_db_enabled() or children_list:
             st.write("")
@@ -1030,7 +1033,11 @@ elif st.session_state.user_role == "parent":
                         why_val = f"💡 {why_val}"
 
                     if db.is_db_enabled():
-                        db.add_daily_mission(active_child_id, title_val, why_val, new_cat)
+                        if db.add_daily_mission(active_child_id, title_val, why_val, new_cat):
+                            st.success("Mission added successfully!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to add mission to database. Check database logs for details.")
                     else:
                         new_id = f"m_{int(datetime.now().timestamp())}"
                         missions.append({
@@ -1042,8 +1049,8 @@ elif st.session_state.user_role == "parent":
                             "category": new_cat
                         })
                         save_state(state)
-                    st.success("Mission added successfully!")
-                    st.rerun()
+                        st.success("Mission added successfully!")
+                        st.rerun()
                 else:
                     st.error("Please fill in both Title and Why!")
 
@@ -1091,10 +1098,14 @@ elif st.session_state.user_role == "parent":
         
         if st.button("☀️ Force Daily Rollover (New Day)"):
             if db.is_db_enabled():
-                db.apply_rollover_db(active_child_id, 1)
+                if db.apply_rollover_db(active_child_id, 1):
+                    st.success("Rollover applied! Day reset completed.")
+                    st.rerun()
+                else:
+                    st.error("Rollover failed! Make sure you ran the SQL script to add reward columns to your children table!")
             else:
                 state["effective_date"] = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
                 state = check_and_apply_9am_rollover(state)
                 save_state(state)
-            st.success("Rollover applied! Day reset completed.")
-            st.rerun()
+                st.success("Rollover applied! Day reset completed.")
+                st.rerun()
