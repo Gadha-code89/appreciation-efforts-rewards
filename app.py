@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.1.0
+# Hot-reload force touch: v1.1.1
 """
 
 import streamlit as st
@@ -13,16 +13,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from core.logger import logger
+import importlib
+import core.logger
+import core.state
+import core.scoring
+import core.reward
+import core.badges
+import core.levels
+import core.db as db
+
+importlib.reload(core.logger)
+importlib.reload(core.state)
+importlib.reload(core.scoring)
+importlib.reload(core.reward)
+importlib.reload(core.badges)
+importlib.reload(core.levels)
+importlib.reload(db)
+
 from core.state import load_state, save_state, check_and_apply_9am_rollover
 from core.scoring import generate_new_quiz, grade_quiz
 from core.reward import complete_mission, confirm_mission
 from core.badges import BADGE_CATALOG, evaluate_badges
 from core.levels import get_level_info, evaluate_level_up
 from agents_app.reporting_agent import run_daily_reporting_agent
-
-# DB module
-import core.db as db
 
 st.set_page_config(
     page_title="My Little Wins",
