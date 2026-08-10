@@ -554,43 +554,53 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
         completed_today = [m["title"] for m in missions if m.get("status") == "Completed"]
         stars_today = len(completed_today)
 
-        # 1. Update Journey Log
+        # 1. Update Journey Log (defensive write inside isolated try-except)
         effective_date_str = child.get("last_login_date")
         if not effective_date_str:
-            effective_date_str = date.today().isoformat()
+            effective_date_str = get_local_operating_date()
 
-        if completed_today:
-            supabase.table("journey_history").insert({
-                "child_id": child_id,
-                "date": effective_date_str,
-                "completed_missions": completed_today,
-                "stars_earned": stars_today
-            }).execute()
+        try:
+            # Check if journey log already exists for this child and date to prevent duplicate inserts
+            res_check = supabase.table("journey_history").select("journey_id").eq("child_id", child_id).eq("date", effective_date_str).execute()
+            if not res_check.data and completed_today:
+                supabase.table("journey_history").insert({
+                    "child_id": child_id,
+                    "date": effective_date_str,
+                    "completed_missions": completed_today,
+                    "stars_earned": stars_today
+                }).execute()
+        except Exception as e:
+            logger.error(f"Failed to write to journey_history in apply_rollover_db: {e}")
 
-        # 1b. Archive detailed daily missions to mission_history table
-        for m in missions:
-            m_title = m.get("title", "")
-            if "Math Mission" in m_title or "math_mission" in m_title:
-                comp_source = "math_auto_complete"
-            elif "Read" in m_title or "reading" in m_title:
-                comp_source = "reading_auto_trigger"
-            else:
-                comp_source = "child"
+        # 1b. Archive detailed daily missions to mission_history table (defensive write inside isolated try-except)
+        try:
+            res_m_check = supabase.table("mission_history").select("history_id").eq("child_id", child_id).eq("date", effective_date_str).execute()
+            if not res_m_check.data:
+                for m in missions:
+                    m_title = m.get("title", "")
+                    if "Math Mission" in m_title or "math_mission" in m_title:
+                        comp_source = "math_auto_complete"
+                    elif "Read" in m_title or "reading" in m_title:
+                        comp_source = "reading_auto_trigger"
+                    else:
+                        comp_source = "child"
 
-            history_payload = {
-                "mission_id": m["mission_id"],
-                "child_id": child_id,
-                "date": effective_date_str,
-                "title": m["title"],
-                "category": m["category"],
-                "why": m.get("why"),
-                "status": m["status"],
-                "math_attempts": m.get("math_attempts") or [],
-                "stars_earned": 1 if m["status"] == "Completed" else 0,
-                "parent_confirmed": m["status"] == "Completed",
-                "completion_source": comp_source
-            }
-            supabase.table("mission_history").insert(history_payload).execute()
+                    history_payload = {
+                        "mission_id": m["mission_id"],
+                        "child_id": child_id,
+                        "date": effective_date_str,
+                        "title": m["title"],
+                        "category": m["category"],
+                        "why": m.get("why"),
+                        "status": m["status"],
+                        "math_attempts": m.get("math_attempts") or [],
+                        "stars_earned": 1 if m["status"] == "Completed" else 0,
+                        "parent_confirmed": m["status"] == "Completed",
+                        "completion_source": comp_source
+                    }
+                    supabase.table("mission_history").insert(history_payload).execute()
+        except Exception as e:
+            logger.error(f"Failed to write to mission_history in apply_rollover_db: {e}")
 
         # 2. Update Streak & Rest Days
         new_streak = child.get("streak", 0)
