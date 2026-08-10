@@ -397,6 +397,8 @@ def get_reading_logs(child_id: str) -> List[Dict[str, Any]]:
         books = res.data or []
         for b in books:
             b["id"] = b["book_id"]
+            # Convert date representation from logged_date
+            b["date"] = str(b.get("logged_date", date.today().isoformat()))
         return books
     except Exception:
         return []
@@ -423,6 +425,7 @@ def log_book_db(child_id: str, title: str, author: str, status: str) -> Dict[str
             log_action_db(child["family_id"], "child", child["name"], "log_book", f"Logged book '{title}' by '{author}' ({status}).")
             b = res.data[0]
             b["id"] = b["book_id"]
+            b["date"] = str(b.get("logged_date", date.today().isoformat()))
             return b
         return None
     except Exception:

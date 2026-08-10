@@ -4,7 +4,7 @@ tests/integration_test.py - End-to-end programmatic simulation of My Little Wins
 
 import unittest
 from datetime import datetime, timedelta
-from core.state import get_default_state, check_and_apply_9am_rollover
+from core.state import get_default_state, check_and_apply_9am_rollover, compute_effective_operating_date
 from core.reward import complete_mission, confirm_mission
 from core.badges import evaluate_badges
 
@@ -76,8 +76,10 @@ class TestMyLittleWinsIntegration(unittest.TestCase):
         self.assertEqual(self.state["total_stars"], 2)
         self.assertEqual(self.state["streak"], 0)  # Streak remains 0 during the day
 
-        # 2. Simulate rollover to a new day (set effective date to yesterday)
-        self.state["effective_date"] = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        # 2. Simulate rollover to a new day (set effective date to 1 day before the current effective date)
+        current_effective = compute_effective_operating_date()
+        current_effective_dt = datetime.strptime(current_effective, "%Y-%m-%d")
+        self.state["effective_date"] = (current_effective_dt - timedelta(days=1)).strftime("%Y-%m-%d")
         
         self.state = check_and_apply_9am_rollover(self.state)
 
