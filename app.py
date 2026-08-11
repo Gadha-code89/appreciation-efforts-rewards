@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.1.9
+# Hot-reload force touch: v1.2.0
 """
 
 import streamlit as st
@@ -801,6 +801,7 @@ elif st.session_state.user_role == "child":
             if db.is_db_enabled():
                 try:
                     all_books = db.get_reading_logs(child_id)
+                    logger.info(f"DEBUG Reading Logs: {all_books}")
                     for book in all_books:
                         b_date = book.get("logged_date") or book.get("date")
                         if b_date:
