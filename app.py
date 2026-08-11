@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.2.0
+# Hot-reload force touch: v1.2.1
 """
 
 import streamlit as st
@@ -805,7 +805,8 @@ elif st.session_state.user_role == "child":
                     for book in all_books:
                         b_date = book.get("logged_date") or book.get("date")
                         if b_date:
-                            reading_logs_by_date.setdefault(b_date, []).append(book)
+                            b_date_str = str(b_date)[:10]
+                            reading_logs_by_date.setdefault(b_date_str, []).append(book)
                 except Exception as e:
                     logger.error(f"Error fetching reading logs for journey: {e}")
 
