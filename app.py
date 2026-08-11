@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.1.8
+# Hot-reload force touch: v1.1.9
 """
 
 import streamlit as st
@@ -796,14 +796,41 @@ elif st.session_state.user_role == "child":
         if not journey:
             st.write("You are just beginning your adventure! Accomplishments will show up here tomorrow. 🌱")
         else:
+            # Pre-fetch all reading logs group by date for dynamic rendering
+            reading_logs_by_date = {}
+            if db.is_db_enabled():
+                try:
+                    all_books = db.get_reading_logs(child_id)
+                    for book in all_books:
+                        b_date = book.get("logged_date") or book.get("date")
+                        if b_date:
+                            reading_logs_by_date.setdefault(b_date, []).append(book)
+                except Exception as e:
+                    logger.error(f"Error fetching reading logs for journey: {e}")
+
             for entry in reversed(journey):
+                entry_date = entry['date']
+                display_missions = list(entry.get('completed_missions', []))
+                
+                # Filter out any book achievements that might have been saved statically to avoid duplicates
+                display_missions = [m for m in display_missions if not m.startswith("📖 Finished Book:") and not m.startswith("📖 Started Book:")]
+                
+                # Dynamic injection from reading_logs
+                day_books = reading_logs_by_date.get(entry_date, [])
+                for b in day_books:
+                    b_status = b.get("status", "")
+                    if "Completed" in b_status:
+                        display_missions.append(f"📖 Finished Book: {b['title']}")
+                    else:
+                        display_missions.append(f"📖 Started Book: {b['title']}")
+
                 st.markdown(f"""
                 <div class="card">
-                    <div style="font-weight: bold; font-size: 1.15rem; color: #EC4899; margin-bottom: 5px;">☀️ Date: {entry['date']}</div>
+                    <div style="font-weight: bold; font-size: 1.15rem; color: #EC4899; margin-bottom: 5px;">☀️ Date: {entry_date}</div>
                     <div style="font-size: 0.95rem; margin-bottom: 4px;"><b>Stars Earned:</b> ⭐ {entry.get('stars_earned', 0)}</div>
                     <div style="font-size: 0.95rem;"><b>Missions Completed:</b></div>
                     <ul style="margin: 3px 0 0 0; padding-left: 20px;">
-                        {"".join([f"<li>{title}</li>" for title in entry.get('completed_missions', [])])}
+                        {"".join([f"<li>{title}</li>" for title in display_missions])}
                     </ul>
                 </div>
                 """, unsafe_allow_html=True)
