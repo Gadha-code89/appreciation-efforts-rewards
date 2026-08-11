@@ -572,7 +572,6 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
             return False
 
         missions = get_daily_missions(child_id)
-        completed_today = [m["title"] for m in missions if m.get("status") == "Completed"]
 
         effective_date_str = child.get("last_login_date")
         if not effective_date_str:
@@ -602,13 +601,20 @@ def apply_rollover_db(child_id: str, gap_days: int) -> bool:
 
         # 3. Books approved on this operating day
         book_stars = 0
+        books_completed = []
         try:
-            res_books = supabase.table("reading_logs").select("book_id").eq("child_id", child_id).eq("status", "Completed").eq("logged_date", effective_date_str).execute()
-            book_stars = len(res_books.data or [])
+            res_books = supabase.table("reading_logs").select("title").eq("child_id", child_id).eq("status", "Completed").eq("logged_date", effective_date_str).execute()
+            books_completed = res_books.data or []
+            book_stars = len(books_completed)
         except Exception as e:
             logger.error(f"Error calculating book stars in rollover: {e}")
 
         stars_today = standard_stars + math_stars + book_stars
+
+        # Generate list of completed achievements today
+        completed_today = [m["title"] for m in missions if m.get("status") == "Completed"]
+        for b in books_completed:
+            completed_today.append(f"📖 Finished Book: {b['title']}")
 
         # 1. Update Journey Log (defensive write inside isolated try-except)
         try:
