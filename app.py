@@ -1,6 +1,6 @@
 """
 app.py - My Little Wins Streamlit Web Interface for iPad/Web Browsers
-# Hot-reload force touch: v1.2.1
+# Hot-reload force touch: v1.2.2
 """
 
 import streamlit as st
@@ -874,12 +874,6 @@ elif st.session_state.user_role == "parent":
         if st.button("Switch Profile 🔄", use_container_width=True, key="switch_profile_btn_parent"):
             switch_profile()
 
-    st.write("")
-    tab_p_status, tab_p_config = st.tabs([
-        "📊 TODAY'S STATUS & CONFIRMATIONS",
-        "⚙️ CONFIGURATION & SETTINGS"
-    ])
-
     # Load child options dynamically if DB is enabled
     children_list = []
     active_child = None
@@ -901,6 +895,13 @@ elif st.session_state.user_role == "parent":
     else:
         active_child_id = "local"
         active_child = {"name": "Child", "current_level": state.get("current_level", 1), "grade_level": state.get("grade_level", 3)}
+
+    st.write("")
+    tab_p_status, tab_p_insights, tab_p_config = st.tabs([
+        "📊 TODAY'S STATUS & CONFIRMATIONS",
+        "💡 WEEKLY INSIGHTS",
+        "⚙️ CONFIGURATION & SETTINGS"
+    ])
 
     # ---------- TODAY'S STATUS TAB ----------
     with tab_p_status:
@@ -1005,6 +1006,30 @@ elif st.session_state.user_role == "parent":
                                 book["status"] = "In Progress"
                                 save_state(state)
                             st.rerun()
+
+    # ---------- WEEKLY INSIGHTS TAB ----------
+    with tab_p_insights:
+        child_name = active_child["name"] if active_child else "Child"
+        st.markdown(f'<div style="font-size: 1.6rem; font-family:\'Fredoka One\'; margin-bottom:15px;">💡 Weekly Insights for {child_name}</div>', unsafe_allow_html=True)
+        
+        # Load and render parent_insights_preview.html mockup dynamically
+        import os
+        mockup_path = os.path.join(os.path.dirname(__file__), "mockups", "parent_insights_preview.html")
+        if os.path.exists(mockup_path):
+            try:
+                with open(mockup_path, "r", encoding="utf-8") as f:
+                    html_content = f.read()
+                # Dynamically replace child name in two places in the mockup content
+                html_content = html_content.replace("Ritwi's week", f"{child_name}'s week")
+                html_content = html_content.replace("Ritwi has fully", f"{child_name} has fully")
+                
+                # Render using Streamlit component
+                import streamlit.components.v1 as components
+                components.html(html_content, height=1250, scrolling=True)
+            except Exception as e:
+                st.error(f"Error loading Parent Insights: {e}")
+        else:
+            st.error("Mockup file 'mockups/parent_insights_preview.html' not found.")
 
     # ---------- PARENT SETTINGS TAB ----------
     with tab_p_config:
